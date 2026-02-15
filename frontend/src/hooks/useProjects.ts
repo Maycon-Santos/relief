@@ -1,41 +1,43 @@
-import { useState, useEffect } from 'react';
-import { api } from '../services/wails';
-import type { Project } from '../types/project';
+import { useCallback, useEffect, useState } from "react";
+import { api } from "../services/wails";
+import type { Project } from "../types/project";
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await api.getProjects();
       setProjects(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error loading projects');
-      console.error('Error loading projects:', err);
+      setError(err instanceof Error ? err.message : "Error loading projects");
+      console.error("Error loading projects:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadProjects();
-    
+
     // Atualizar a cada 5 segundos
     const interval = setInterval(loadProjects, 5000);
-    
+
     return () => clearInterval(interval);
-  }, []);
+  }, [loadProjects]);
 
   const startProject = async (id: string) => {
     try {
       await api.startProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Error starting project');
+      throw new Error(
+        err instanceof Error ? err.message : "Error starting project",
+      );
     }
   };
 
@@ -44,7 +46,9 @@ export function useProjects() {
       await api.stopProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Error stopping project');
+      throw new Error(
+        err instanceof Error ? err.message : "Error stopping project",
+      );
     }
   };
 
@@ -53,7 +57,9 @@ export function useProjects() {
       await api.restartProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Error restarting project');
+      throw new Error(
+        err instanceof Error ? err.message : "Error restarting project",
+      );
     }
   };
 
@@ -62,7 +68,9 @@ export function useProjects() {
       await api.removeProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Error removing project');
+      throw new Error(
+        err instanceof Error ? err.message : "Error removing project",
+      );
     }
   };
 

@@ -85,19 +85,6 @@ func GetHomeDir() (string, error) {
 	return home, nil
 }
 
-// GetSofredorDir returns the ~/.sofredor directory
-func GetSofredorDir() (string, error) {
-	home, err := GetHomeDir()
-	if err != nil {
-		return "", err
-	}
-	sofredorDir := filepath.Join(home, ".sofredor")
-	if err := EnsureDir(sofredorDir); err != nil {
-		return "", fmt.Errorf("error creating .sofredor directory: %w", err)
-	}
-	return sofredorDir, nil
-}
-
 // GetReliefSubDir returns a subdirectory inside ~/.relief
 func GetReliefSubDir(subdir string) (string, error) {
 	reliefDir, err := GetReliefDir()

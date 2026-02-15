@@ -1,10 +1,21 @@
 // Wrapper para os bindings Wails
 // Este arquivo será atualizado pelo Wails após a primeira build
 
-import type { Project, LogEntry, AppStatus } from '../types/project';
+import type { Project, LogEntry, AppStatus } from "../types/project";
 
 // @ts-ignore - Wails injeta estas funções globalmente
-const { GetProjects, GetProject, StartProject, StopProject, RestartProject, GetProjectLogs, AddLocalProject, RemoveProject, RefreshConfig, GetStatus } = window.go?.main?.App || {};
+const {
+  GetProjects,
+  GetProject,
+  StartProject,
+  StopProject,
+  RestartProject,
+  GetProjectLogs,
+  AddLocalProject,
+  RemoveProject,
+  RefreshConfig,
+  GetStatus,
+} = window.go?.main?.App || {};
 
 export const api = {
   async getProjects(): Promise<Project[]> {
@@ -13,22 +24,22 @@ export const api = {
   },
 
   async getProject(id: string): Promise<Project> {
-    if (!GetProject) throw new Error('API not available');
+    if (!GetProject) throw new Error("API not available");
     return await GetProject(id);
   },
 
   async startProject(id: string): Promise<void> {
-    if (!StartProject) throw new Error('API not available');
+    if (!StartProject) throw new Error("API not available");
     return await StartProject(id);
   },
 
   async stopProject(id: string): Promise<void> {
-    if (!StopProject) throw new Error('API not available');
+    if (!StopProject) throw new Error("API not available");
     return await StopProject(id);
   },
 
   async restartProject(id: string): Promise<void> {
-    if (!RestartProject) throw new Error('API not available');
+    if (!RestartProject) throw new Error("API not available");
     return await RestartProject(id);
   },
 
@@ -38,17 +49,17 @@ export const api = {
   },
 
   async addLocalProject(path: string): Promise<void> {
-    if (!AddLocalProject) throw new Error('API not available');
+    if (!AddLocalProject) throw new Error("API not available");
     return await AddLocalProject(path);
   },
 
   async removeProject(id: string): Promise<void> {
-    if (!RemoveProject) throw new Error('API not available');
+    if (!RemoveProject) throw new Error("API not available");
     return await RemoveProject(id);
   },
 
   async refreshConfig(): Promise<void> {
-    if (!RefreshConfig) throw new Error('API not available');
+    if (!RefreshConfig) throw new Error("API not available");
     return await RefreshConfig();
   },
 

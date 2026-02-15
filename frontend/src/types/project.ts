@@ -17,9 +17,14 @@ export interface Project {
   last_error?: string;
 }
 
-export type ProjectType = 'docker' | 'node' | 'python' | 'java' | 'go' | 'ruby';
+export type ProjectType = "docker" | "node" | "python" | "java" | "go" | "ruby";
 
-export type ProjectStatus = 'stopped' | 'starting' | 'running' | 'error' | 'unknown';
+export type ProjectStatus =
+  | "stopped"
+  | "starting"
+  | "running"
+  | "error"
+  | "unknown";
 
 export interface Dependency {
   name: string;

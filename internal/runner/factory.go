@@ -4,8 +4,8 @@ package runner
 import (
 	"fmt"
 
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/internal/domain"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // Factory cria runners baseado no tipo de projeto

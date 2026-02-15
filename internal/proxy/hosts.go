@@ -51,17 +51,17 @@ func (h *HostsManager) AddEntry(domain string) error {
 		return fmt.Errorf("erro ao ler arquivo hosts: %w", err)
 	}
 
-	// Adicionar nova entrada
-	newEntry := fmt.Sprintf("127.0.0.1 %s # SOFREDOR\n", domain)
+	// Add new entry
+	newEntry := fmt.Sprintf("127.0.0.1 %s # RELIEF\n", domain)
 	
-	// Procurar bloco SOFREDOR
+	// Look for RELIEF block
 	contentStr := string(content)
-	if strings.Contains(contentStr, "# BEGIN SOFREDOR") {
-		// Adicionar antes do END
-		contentStr = strings.Replace(contentStr, "# END SOFREDOR", newEntry+"# END SOFREDOR", 1)
+	if strings.Contains(contentStr, "# BEGIN RELIEF") {
+		// Add before END marker
+		contentStr = strings.Replace(contentStr, "# END RELIEF", newEntry+"# END RELIEF", 1)
 	} else {
-		// Criar bloco
-		contentStr += "\n# BEGIN SOFREDOR\n" + newEntry + "# END SOFREDOR\n"
+		// Create new block
+		contentStr += "\n# BEGIN RELIEF\n" + newEntry + "# END RELIEF\n"
 	}
 
 	// Escrever de volta

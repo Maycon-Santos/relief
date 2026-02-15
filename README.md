@@ -1,4 +1,4 @@
-# ⚡ SofredorOrchestrator
+# ⚡ Relief Orchestrator
 
 > **Hybrid local development orchestration tool**
 
@@ -37,8 +37,8 @@ Manage multiple projects simultaneously with support for Node.js, Python, Docker
 
 ```bash
 # Clone the repository
-git clone https://github.com/omelete/sofredor-orchestrator.git
-cd sofredor-orchestrator
+git clone https://github.com/omelete/relief.git
+cd relief
 
 # Install dependencies
 go mod download
@@ -50,16 +50,16 @@ wails dev
 
 ### Testing with Hello World Example
 
-1. Start Sofredor Orchestrator
+1. Start Relief Orchestrator
 2. Click "Add Local Project"
 3. Select the `examples/hello-world` folder
 4. Click "Start" on the project
-5. Access: `http://hello.sofredor.local`
+5. Access: `http://hello.local.dev`
 
 You will see:
 ```json
 {
-  "message": "Hello from SofredorOrchestrator!",
+  "message": "Hello from Relief Orchestrator!",
   "project": "hello-world",
   ...
 }
@@ -69,11 +69,11 @@ You will see:
 
 ## 📋 Usage
 
-### 1. Create a `sofredor.yaml` in your project
+### 1. Create a `relief.yaml` in your project
 
 ```yaml
 name: "my-api"
-domain: "api.sofredor.local"
+domain: "api.local.dev"
 type: "node"
 
 dependencies:
@@ -100,7 +100,7 @@ In the interface:
 ### 3. Access the service
 
 ```bash
-curl http://api.sofredor.local
+curl http://api.local.dev
 ```
 
 ---
@@ -137,7 +137,7 @@ curl http://api.sofredor.local
 ## 📁 Project Structure
 
 ```
-/sofredor-orchestrator
+/relief
 ├── cmd/app/              # Main entrypoint (Wails)
 ├── internal/             # Private code
 │   ├── app/              # Wails bindings
@@ -163,13 +163,13 @@ curl http://api.sofredor.local
 
 ## 🔧 Configuration
 
-### Main File: `~/.sofredor/config.yaml`
+### Main File: `~/.relief/config.yaml`
 
 ```yaml
 projects:
   - name: "my-api"
     path: "~/projects/my-api"
-    domain: "api.sofredor.local"
+    domain: "api.local.dev"
     type: "node"
     auto_start: true
 
@@ -185,7 +185,7 @@ proxy:
   dashboard: true
 ```
 
-### Local Configuration (Override): `~/.sofredor/config.local.yaml`
+### Local Configuration (Override): `~/.relief/config.local.yaml`
 
 ```yaml
 # Overrides remote configuration
@@ -196,7 +196,7 @@ projects:
       PORT: "4000"           # Port override
 ```
 
-🔗 [Complete sofredor.yaml schema](docs/manifest-schema.md)
+🔗 [Complete relief.yaml schema](docs/manifest-schema.md)
 
 ---
 
@@ -204,21 +204,21 @@ projects:
 
 ### Traefik (Reverse Proxy)
 
-The Orchestrator automatically configures Traefik to route `*.sofredor.local` domains to project ports.
+The Orchestrator automatically configures Traefik to route `*.local.dev` domains to project ports.
 
 **Routing example:**
 ```
-hello.sofredor.local  →  localhost:3000
-api.sofredor.local    →  localhost:4000
-app.sofredor.local    →  localhost:5173
+hello.local.dev  →  localhost:3000
+api.local.dev    →  localhost:4000
+app.local.dev    →  localhost:5173
 ```
 
 ### /etc/hosts
 
 The Orchestrator adds entries automatically:
 ```
-127.0.0.1 hello.sofredor.local # SOFREDOR
-127.0.0.1 api.sofredor.local   # SOFREDOR
+127.0.0.1 hello.local.dev # RELIEF
+127.0.0.1 api.local.dev   # RELIEF
 ```
 
 ⚠️ **Note:** Requires elevated privileges on Linux/Mac. The app will request permission.
@@ -270,14 +270,14 @@ Contributions are very welcome! Please read the [Contributing Guide](docs/contri
 
 - [Architecture](docs/architecture.md) - Design decisions and flows
 - [Contributing Guide](docs/contributing.md) - How to contribute
-- [Manifest Schema](docs/manifest-schema.md) - `sofredor.yaml` reference
+- [Manifest Schema](docs/manifest-schema.md) - `relief.yaml` reference
 - [Hello World Example](examples/hello-world/README.md) - Practical tutorial
 
 ---
 
 ## 🐛 Issues & Bugs
 
-Found a bug? [Open an issue](https://github.com/omelete/sofredor-orchestrator/issues/new)
+Found a bug? [Open an issue](https://github.com/omelete/relief/issues/new)
 
 ---
 
@@ -292,14 +292,14 @@ This project is licensed under the [MIT License](LICENSE).
 - [Wails](https://wails.io) - Go + Web GUI framework
 - [Traefik](https://traefik.io) - Modern reverse proxy
 - [React](https://reactjs.org) - UI library
-- All [contributors](https://github.com/omelete/sofredor-orchestrator/graphs/contributors)
+- All [contributors](https://github.com/omelete/relief/graphs/contributors)
 
 ---
 
 ## 📞 Contact
 
 - **Email:** dev@omelete.com
-- **Issues:** [GitHub Issues](https://github.com/omelete/sofredor-orchestrator/issues)
+- **Issues:** [GitHub Issues](https://github.com/omelete/relief/issues)
 
 ---
 
