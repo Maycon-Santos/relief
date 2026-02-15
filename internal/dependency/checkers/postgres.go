@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // PostgresChecker verifica e gerencia PostgreSQL
@@ -66,8 +66,8 @@ func (c *PostgresChecker) Install(ctx context.Context, version string) error {
 	})
 
 	// TODO: Implementar container PostgreSQL via Docker
-	// docker run -d --name sofredor-postgres-<version> \
-	//   -e POSTGRES_PASSWORD=sofredor \
+	// docker run -d --name relief-postgres-<version> \
+	//   -e POSTGRES_PASSWORD=relief \
 	//   -p 5432:5432 \
 	//   postgres:<version>
 

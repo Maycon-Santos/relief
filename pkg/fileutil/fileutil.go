@@ -1,4 +1,4 @@
-// Package fileutil fornece utilitários para operações de filesystem.
+// Package fileutil provides utilities for filesystem operations.
 package fileutil
 
 import (
@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 )
 
-// Exists verifica se um arquivo ou diretório existe
+// Exists checks if a file or directory exists
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// IsDir verifica se o path é um diretório
+// IsDir checks if the path is a directory
 func IsDir(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -23,7 +23,7 @@ func IsDir(path string) bool {
 	return info.IsDir()
 }
 
-// EnsureDir cria um diretório se não existir (incluindo pais)
+// EnsureDir creates a directory if it doesn't exist (including parents)
 func EnsureDir(path string) error {
 	if Exists(path) {
 		return nil
@@ -31,61 +31,61 @@ func EnsureDir(path string) error {
 	return os.MkdirAll(path, 0755)
 }
 
-// CopyFile copia um arquivo de src para dst
+// CopyFile copies a file from src to dst
 func CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("erro ao abrir arquivo fonte: %w", err)
+		return fmt.Errorf("error opening source file: %w", err)
 	}
 	defer sourceFile.Close()
 
-	// Criar diretório de destino se não existir
+	// Create destination directory if it doesn't exist
 	if err := EnsureDir(filepath.Dir(dst)); err != nil {
-		return fmt.Errorf("erro ao criar diretório destino: %w", err)
+		return fmt.Errorf("error creating destination directory: %w", err)
 	}
 
 	destFile, err := os.Create(dst)
 	if err != nil {
-		return fmt.Errorf("erro ao criar arquivo destino: %w", err)
+		return fmt.Errorf("error creating destination file: %w", err)
 	}
 	defer destFile.Close()
 
 	if _, err := io.Copy(destFile, sourceFile); err != nil {
-		return fmt.Errorf("erro ao copiar arquivo: %w", err)
+		return fmt.Errorf("error copying file: %w", err)
 	}
 
-	// Copiar permissões
+	// Copy permissions
 	sourceInfo, err := os.Stat(src)
 	if err != nil {
-		return fmt.Errorf("erro ao obter info do arquivo fonte: %w", err)
+		return fmt.Errorf("error getting source file info: %w", err)
 	}
 
 	return os.Chmod(dst, sourceInfo.Mode())
 }
 
-// WriteFile escreve conteúdo em um arquivo, criando diretórios se necessário
+// WriteFile writes content to a file, creating directories if necessary
 func WriteFile(path string, content []byte, perm os.FileMode) error {
 	if err := EnsureDir(filepath.Dir(path)); err != nil {
-		return fmt.Errorf("erro ao criar diretório: %w", err)
+		return fmt.Errorf("error creating directory: %w", err)
 	}
 	return os.WriteFile(path, content, perm)
 }
 
-// ReadFile lê o conteúdo de um arquivo
+// ReadFile reads the content of a file
 func ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-// GetHomeDir retorna o diretório home do usuário
+// GetHomeDir returns the user's home directory
 func GetHomeDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("erro ao obter diretório home: %w", err)
+		return "", fmt.Errorf("error getting home directory: %w", err)
 	}
 	return home, nil
 }
 
-// GetSofredorDir retorna o diretório ~/.sofredor
+// GetSofredorDir returns the ~/.sofredor directory
 func GetSofredorDir() (string, error) {
 	home, err := GetHomeDir()
 	if err != nil {
@@ -93,20 +93,20 @@ func GetSofredorDir() (string, error) {
 	}
 	sofredorDir := filepath.Join(home, ".sofredor")
 	if err := EnsureDir(sofredorDir); err != nil {
-		return "", fmt.Errorf("erro ao criar diretório .sofredor: %w", err)
+		return "", fmt.Errorf("error creating .sofredor directory: %w", err)
 	}
 	return sofredorDir, nil
 }
 
-// GetSofredorSubDir retorna um subdiretório dentro de ~/.sofredor
-func GetSofredorSubDir(subdir string) (string, error) {
-	sofredorDir, err := GetSofredorDir()
+// GetReliefSubDir returns a subdirectory inside ~/.relief
+func GetReliefSubDir(subdir string) (string, error) {
+	reliefDir, err := GetReliefDir()
 	if err != nil {
 		return "", err
 	}
-	subPath := filepath.Join(sofredorDir, subdir)
+	subPath := filepath.Join(reliefDir, subdir)
 	if err := EnsureDir(subPath); err != nil {
-		return "", fmt.Errorf("erro ao criar subdiretório: %w", err)
+		return "", fmt.Errorf("error creating subdirectory: %w", err)
 	}
 	return subPath, nil
 }

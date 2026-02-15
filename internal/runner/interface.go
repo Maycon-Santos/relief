@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
+	"github.com/omelete/relief/internal/domain"
 )
 
 // ProjectRunner define a interface para executores de projeto

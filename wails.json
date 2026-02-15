@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "sofredor-orchestrator",
-  "outputfilename": "sofredor-orchestrator",
+  "name": "relief",
+  "outputfilename": "relief",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
@@ -12,7 +12,7 @@
   },
   "info": {
     "companyName": "Omelete",
-    "productName": "Sofredor Orchestrator",
+    "productName": "Relief Orchestrator",
     "productVersion": "0.1.0",
     "copyright": "Copyright © 2026 Omelete",
     "comments": "Ferramenta de orquestração de desenvolvimento local híbrida"

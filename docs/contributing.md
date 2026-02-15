@@ -1,205 +1,285 @@
-# Guia de Contribuição
+# Contributing to Relief Orchestrator
 
-Obrigado por considerar contribuir com o **SofredorOrchestrator**! 🎉
+Thank you for considering contributing to **Relief Orchestrator**! 🎉
 
-## Código de Conduta
+## How to Contribute
 
-- Seja respeitoso e inclusivo
-- Feedback construtivo é sempre bem-vindo
-- Foque no problema técnico, não na pessoa
+### 🐛 Reporting Bugs
 
-## Como Contribuir
+Found a bug? Please [open an issue](https://github.com/omelete/relief/issues/new) with:
+- Clear description of the problem
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment (OS, Go version, Node version)
+- Relevant logs or screenshots
 
-### 1. Setup do Ambiente de Desenvolvimento
+### 💡 Suggesting Features
 
-#### Pré-requisitos
-- Go 1.22+
-- Node.js 18+
-- Wails CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-- golangci-lint: `brew install golangci-lint` (Mac) ou equivalente
+Have an idea? [Open an issue](https://github.com/omelete/relief/issues/new) with:
+- Clear description of the feature
+- Use case / problem it solves
+- Examples or mockups (if applicable)
 
-#### Clone e Instale
+### 🔧 Setting Up Development Environment
+
 ```bash
-git clone https://github.com/omelete/sofredor-orchestrator.git
-cd sofredor-orchestrator
+# Clone the repository
+git clone https://github.com/omelete/relief.git
+cd relief
 
-# Instalar dependências Go
+# Install dependencies
 go mod download
+cd frontend && npm install && cd ..
 
-# Instalar dependências Frontend
-cd frontend
-npm install
-cd ..
-```
-
-#### Executar em Modo Dev
-```bash
+# Run in dev mode
 wails dev
 ```
 
-### 2. Estrutura de Branches
+**Requirements:**
+- Go 1.22+
+- Node.js 18+
+- Wails CLI v2
 
-- `main`: Branch principal (sempre estável)
-- `develop`: Branch de desenvolvimento
-- `feature/nome-da-feature`: Novas funcionalidades
-- `fix/nome-do-bug`: Correções de bugs
+## Code Conventions
 
-### 3. Processo de Contribuição
+### Go Code
 
-1. **Fork** o repositório
-2. Crie uma **branch** a partir de `develop`:
-   ```bash
-   git checkout -b feature/minha-feature develop
-   ```
-3. **Implemente** sua mudança
-4. **Teste** localmente:
-   ```bash
-   ./build/ci/test.sh
-   ```
-5. **Commit** com mensagem descritiva:
-   ```bash
-   git commit -m "feat: adiciona suporte a Podman runner"
-   ```
-6. **Push** para seu fork:
-   ```bash
-   git push origin feature/minha-feature
-   ```
-7. Abra um **Pull Request** para `develop`
+- **Follow Standard Go Layout**
+- **Use `gofmt`** for formatting
+- **Run linter:** `golangci-lint run`
+- **Write tests** for new features
+- **Document public APIs** with comments
+- **Use descriptive variable names**
 
-### 4. Convenções de Código
-
-#### Go
-- Siga o [Effective Go](https://golang.org/doc/effective_go)
-- Use `gofmt` para formatação
-- Adicione comentários em funções públicas
-- Mantenha funções pequenas (< 50 linhas)
-
-**Exemplo:**
+**Example:**
 ```go
-// CheckDependencies verifica todas as dependências de um projeto.
-// Retorna erro se alguma dependência crítica não estiver satisfeita.
-func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project) error {
-    // Implementação
+// GetProject retrieves a project by ID
+func (r *ProjectRepository) GetProject(id string) (*domain.Project, error) {
+    // Implementation...
 }
 ```
 
-#### TypeScript/React
-- Use TypeScript strict mode
-- Componentes funcionais com hooks
-- Props tipadas com interfaces
-- Nomeie arquivos com PascalCase para componentes
+### TypeScript/React Code
 
-**Exemplo:**
+- **Use TypeScript** for type safety
+- **Functional components** with hooks
+- **Props interfaces** for components
+- **No `any` types** (use specific types)
+- **Format with Prettier**
+
+**Example:**
 ```typescript
 interface ProjectCardProps {
   project: Project;
   onStart: () => Promise<void>;
+  onStop: () => Promise<void>;
 }
 
-export function ProjectCard({ project, onStart }: ProjectCardProps) {
-  // Implementação
-}
+export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onStart, onStop }) => {
+  // Implementation...
+};
 ```
 
-### 5. Testes
+### Commit Messages
 
-#### Testes Unitários (Go)
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `style`: Code style (formatting, no logic change)
+- `refactor`: Code refactor (no feat/fix)
+- `test`: Adding tests
+- `chore`: Maintenance tasks
+
+**Examples:**
+```
+feat(runner): add docker support
+fix(proxy): handle missing hosts file gracefully
+docs(readme): update installation instructions
+```
+
+## Pull Request Process
+
+1. **Fork the repository** and create a branch from `main`
+2. **Make your changes** following code conventions
+3. **Write/update tests** to cover changes
+4. **Update documentation** if needed
+5. **Run tests:** `./build/ci/test.sh`
+6. **Run linter:** `golangci-lint run`
+7. **Create PR** with clear description
+
+### PR Title
+
+Follow commit message convention:
+```
+feat: add support for kubernetes runner
+fix: prevent crash on missing manifest
+```
+
+### PR Description Template
+
+```markdown
+## Description
+Brief description of changes
+
+## Motivation
+Why is this change needed?
+
+## Changes
+- List of changes made
+- Another change
+
+## Testing
+How was this tested?
+
+## Screenshots (if applicable)
+Add screenshots for UI changes
+
+## Checklist
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] Linter passing
+- [ ] No breaking changes (or documented)
+```
+
+## Project Structure
+
+```
+/relief
+├── cmd/app/              # Main entrypoint
+├── internal/             # Private code
+│   ├── app/              # Wails bindings
+│   ├── config/           # Configuration management
+│   ├── domain/           # Business entities
+│   ├── runner/           # Execution strategies
+│   ├── dependency/       # Dependency checkers
+│   ├── proxy/            # Network management
+│   └── storage/          # Database layer
+├── pkg/                  # Reusable utilities
+├── frontend/             # React app
+├── examples/             # Example projects
+├── configs/              # Config examples
+├── docs/                 # Documentation
+└── build/                # Build scripts
+```
+
+## Testing
+
+### Running Tests
+
 ```bash
-go test ./...
+# All tests
+./build/ci/test.sh
+
+# Specific package
+go test ./internal/config/...
+
+# With coverage
+go test -cover ./...
+
+# Verbose
+go test -v ./...
 ```
 
-Estrutura:
+### Writing Tests
+
 ```go
-func TestManager_CheckDependencies(t *testing.T) {
+func TestConfigLoader_LoadConfig(t *testing.T) {
     // Arrange
-    manager := NewManager(logger)
-    project := &domain.Project{...}
+    loader := config.NewLoader()
     
     // Act
-    err := manager.CheckDependencies(ctx, project)
+    cfg, err := loader.LoadConfig()
     
     // Assert
     if err != nil {
-        t.Errorf("expected no error, got %v", err)
+        t.Fatalf("unexpected error: %v", err)
+    }
+    if cfg == nil {
+        t.Fatal("expected config, got nil")
     }
 }
 ```
 
-#### Testes de Integração
-- Coloque em arquivos `*_integration_test.go`
-- Use build tag: `// +build integration`
+## Documentation
 
-### 6. Mensagens de Commit
+### Code Documentation
 
-Siga [Conventional Commits](https://www.conventionalcommits.org/):
+- Document all exported functions/types
+- Use GoDoc format
+- Include examples for complex APIs
 
-- `feat:` Nova funcionalidade
-- `fix:` Correção de bug
-- `docs:` Mudanças em documentação
-- `style:` Formatação, ponto e vírgula, etc
-- `refactor:` Refatoração de código
-- `test:` Adição/modificação de testes
-- `chore:` Tarefas de manutenção
+### User Documentation
 
-**Exemplos:**
-```
-feat: adiciona DockerRunner completo
-fix: corrige race condition no NativeRunner
-docs: atualiza README com instruções de build
-refactor: simplifica lógica de merge de configs
-test: adiciona testes para HostsManager
-```
+- Update README.md for major features
+- Update docs/ for architectural changes
+- Keep manifest-schema.md current
 
-### 7. Pull Request Guidelines
+## Areas Needing Contributions
 
-#### Checklist antes de submeter:
-- [ ] Código compila sem erros
-- [ ] Testes passam (`./build/ci/test.sh`)
-- [ ] Linter passa (`golangci-lint run`)
-- [ ] Documentação atualizada (se aplicável)
-- [ ] CHANGELOG.md atualizado (para features/fixes significativos)
-- [ ] Commit messages seguem convenções
+### 🚀 High Priority
 
-#### Descrição do PR:
-```markdown
-## Descrição
-Breve descrição da mudança
+- **DockerRunner:** Complete implementation
+- **Auto-installers:** Node.js/Python portable installers
+- **Tests:** Increase coverage (currently ~40%)
+- **Documentation:** More examples and tutorials
 
-## Motivação
-Por que essa mudança é necessária?
+### 🎨 UI/UX
 
-## Mudanças
-- Mudança 1
-- Mudança 2
+- Improve interface design
+- Add dark/light theme toggle
+- Better error messages
+- Loading states
 
-## Testes
-Como você testou isso?
+### 📚 Documentation
 
-## Screenshots (se aplicável)
-```
+- Video tutorials
+- Blog posts / articles
+- Translations (Spanish, Portuguese, etc.)
+- Architecture diagrams
 
-### 8. Áreas que Precisam de Ajuda
+### 🔧 Features
 
-Procurando por contribuições em:
+- Health checks for projects
+- Metrics / monitoring
+- Desktop notifications
+- Plugin system
+- Remote project support (SSH)
 
-- **DockerRunner:** Implementação completa usando Docker SDK
-- **Instaladores Automáticos:** Download e instalação de Node.js, Python
-- **UI/UX:** Melhorias na interface React
-- **Testes:** Aumentar cobertura de testes
-- **Documentação:** Tutoriais, exemplos, traduções
-- **Novos Runners:** Podman, systemd, PM2
-- **Novos Checkers:** Ruby, PHP, Java
+## Code Review
 
-### 9. Dúvidas?
+All PRs require:
+- ✅ At least one approval
+- ✅ Passing CI/CD checks
+- ✅ No merge conflicts
+- ✅ Updated documentation
 
-- Abra uma [Issue](https://github.com/omelete/sofredor-orchestrator/issues) com a tag `question`
-- Entre no Discord da comunidade (link no README)
-- Envie email para: dev@omelete.com
+## Questions?
 
-## Reconhecimento
+- Open an [Issue](https://github.com/omelete/relief/issues) with `question` tag
+- Join discussions on GitHub
 
-Todos os contribuidores serão listados no README e terão nosso agradecimento eterno! 🙏
+## Code of Conduct
+
+- Be respectful and inclusive
+- Provide constructive feedback
+- Focus on the code, not the person
+- Help others learn and grow
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the MIT License.
 
 ---
 
-**Obrigado por tornar o SofredorOrchestrator melhor!** ✨
+**Thank you for making Relief Orchestrator better!** ✨

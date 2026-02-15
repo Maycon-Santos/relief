@@ -1,4 +1,4 @@
-// Package dependency gerencia verificação e instalação de dependências.
+// Package dependency manages dependency verification and installation.
 package dependency
 
 import (
@@ -8,37 +8,37 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
-	"github.com/omelete/sofredor-orchestrator/internal/dependency/checkers"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/internal/domain"
+	"github.com/omelete/relief/internal/dependency/checkers"
+	"github.com/omelete/relief/pkg/logger"
 )
 
-// Manager gerencia verificação e instalação de dependências
+// Manager manages dependency verification and installation
 type Manager struct {
 	checkers map[string]Checker
 	logger   *logger.Logger
 }
 
-// Checker define a interface para verificadores de dependência
+// Checker defines the interface for dependency checkers
 type Checker interface {
-	// Check verifica se a dependência está instalada e retorna a versão
+	// Check verifies if the dependency is installed and returns the version
 	Check(ctx context.Context) (string, error)
 	
-	// Install instala a dependência
+	// Install installs the dependency
 	Install(ctx context.Context, version string) error
 	
-	// GetPath retorna o path do binário da dependência
+	// GetPath returns the path of the dependency binary
 	GetPath() string
 }
 
-// NewManager cria uma nova instância de Manager
+// NewManager creates a new Manager instance
 func NewManager(log *logger.Logger) *Manager {
 	m := &Manager{
 		checkers: make(map[string]Checker),
 		logger:   log,
 	}
 
-	// Registrar checkers
+	// Register checkers
 	m.checkers["node"] = checkers.NewNodeChecker(log)
 	m.checkers["python"] = checkers.NewPythonChecker(log)
 	m.checkers["postgres"] = checkers.NewPostgresChecker(log)
@@ -46,7 +46,7 @@ func NewManager(log *logger.Logger) *Manager {
 	return m
 }
 
-// CheckDependencies verifica todas as dependências de um projeto
+// CheckDependencies verifies all dependencies of a project
 func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project) error {
 	m.logger.Info("Verificando dependências", map[string]interface{}{
 		"project": project.Name,
@@ -57,7 +57,7 @@ func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project
 		dep := &project.Dependencies[i]
 		
 		if err := m.checkDependency(ctx, dep); err != nil {
-			m.logger.Warn("Dependência não satisfeita", map[string]interface{}{
+			m.logger.Warn("Dependency not satisfied", map[string]interface{}{
 				"dependency": dep.Name,
 				"error":      err.Error(),
 			})
@@ -65,7 +65,7 @@ func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project
 			dep.Message = err.Error()
 		} else {
 			dep.Satisfied = true
-			m.logger.Info("Dependência satisfeita", map[string]interface{}{
+			m.logger.Info("Dependency satisfied", map[string]interface{}{
 				"dependency": dep.Name,
 				"version":    dep.Version,
 			})
@@ -75,39 +75,39 @@ func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project
 	return nil
 }
 
-// checkDependency verifica uma dependência específica
+// checkDependency verifies a specific dependency
 func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) error {
 	checker, exists := m.checkers[dep.Name]
 	if !exists {
-		// Se não há checker específico, tentar verificar via command
+		// If there's no specific checker, try to verify via command
 		return m.checkGenericCommand(ctx, dep)
 	}
 
-	// Verificar versão instalada
+	// Verify installed version
 	installedVersion, err := checker.Check(ctx)
 	if err != nil {
 		if dep.Managed {
-			// Tentar instalar
-			m.logger.Info("Tentando instalar dependência", map[string]interface{}{
+			// Try to install
+			m.logger.Info("Trying to install dependency", map[string]interface{}{
 				"dependency": dep.Name,
 				"version":    dep.RequiredVersion,
 			})
 			
 			if err := checker.Install(ctx, dep.RequiredVersion); err != nil {
-				return fmt.Errorf("erro ao instalar: %w", err)
+				return fmt.Errorf("error installing: %w", err)
 			}
 
-			// Verificar novamente
+			// Verify again
 			installedVersion, err = checker.Check(ctx)
 			if err != nil {
-				return fmt.Errorf("dependência não encontrada após instalação: %w", err)
+				return fmt.Errorf("dependency not found after installation: %w", err)
 			}
 		} else {
-			return fmt.Errorf("não instalada: %w", err)
+			return fmt.Errorf("not installed: %w", err)
 		}
 	}
 
-	// Validar versão
+	// Validate version
 	if err := m.validateVersion(installedVersion, dep.RequiredVersion); err != nil {
 		return err
 	}
@@ -116,13 +116,13 @@ func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) e
 	return nil
 }
 
-// validateVersion valida se a versão instalada satisfaz o requisito
+// validateVersion validates if the installed version satisfies the requirement
 func (m *Manager) validateVersion(installed, required string) error {
-	// Limpar prefixos comuns
+	// Clean common prefixes
 	installed = strings.TrimPrefix(installed, "v")
 	required = strings.TrimPrefix(required, "v")
 
-	// Remover operadores do required
+	// Remove operators from required
 	operator := ""
 	if strings.HasPrefix(required, ">=") {
 		operator = ">="
@@ -141,11 +141,11 @@ func (m *Manager) validateVersion(installed, required string) error {
 		required = strings.TrimPrefix(required, "=")
 	}
 
-	// Remover espaços
+	// Remove spaces
 	installed = strings.TrimSpace(installed)
 	required = strings.TrimSpace(required)
 
-	// Se não houver operador e versions são iguais, OK
+	// If there's no operator and versions are equal, OK
 	if operator == "" && installed == required {
 		return nil
 	}
@@ -153,51 +153,51 @@ func (m *Manager) validateVersion(installed, required string) error {
 	// Parse versions
 	vInstalled, err := version.NewVersion(installed)
 	if err != nil {
-		return fmt.Errorf("erro ao fazer parse da versão instalada: %w", err)
+		return fmt.Errorf("error parsing installed version: %w", err)
 	}
 
 	vRequired, err := version.NewVersion(required)
 	if err != nil {
-		return fmt.Errorf("erro ao fazer parse da versão requerida: %w", err)
+		return fmt.Errorf("error parsing required version: %w", err)
 	}
 
-	// Comparar
+	// Compare
 	switch operator {
 	case ">=":
 		if vInstalled.LessThan(vRequired) {
-			return fmt.Errorf("versão %s não satisfaz requisito >=%s", installed, required)
+			return fmt.Errorf("version %s does not satisfy requirement >=%s", installed, required)
 		}
 	case ">":
 		if vInstalled.LessThanOrEqual(vRequired) {
-			return fmt.Errorf("versão %s não satisfaz requisito >%s", installed, required)
+			return fmt.Errorf("version %s does not satisfy requirement >%s", installed, required)
 		}
 	case "<=":
 		if vInstalled.GreaterThan(vRequired) {
-			return fmt.Errorf("versão %s não satisfaz requisito <=%s", installed, required)
+			return fmt.Errorf("version %s does not satisfy requirement <=%s", installed, required)
 		}
 	case "<":
 		if vInstalled.GreaterThanOrEqual(vRequired) {
-			return fmt.Errorf("versão %s não satisfaz requisito <%s", installed, required)
+			return fmt.Errorf("version %s does not satisfy requirement <%s", installed, required)
 		}
 	case "=", "":
 		if !vInstalled.Equal(vRequired) {
-			return fmt.Errorf("versão %s não corresponde a %s", installed, required)
+			return fmt.Errorf("version %s does not match %s", installed, required)
 		}
 	}
 
 	return nil
 }
 
-// checkGenericCommand verifica uma dependência genérica via comando
+// checkGenericCommand verifies a generic dependency via command
 func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependency) error {
-	// Tentar executar <name> --version
+	// Try to execute <name> --version
 	cmd := exec.CommandContext(ctx, dep.Name, "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("comando não encontrado")
+		return fmt.Errorf("command not found")
 	}
 
-	// Extrair versão da output (heurística simples)
+	// Extract version from output (simple heuristic)
 	version := strings.TrimSpace(string(output))
 	lines := strings.Split(version, "\n")
 	if len(lines) > 0 {
@@ -207,7 +207,7 @@ func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependenc
 	dep.Version = version
 	dep.Satisfied = true
 	
-	m.logger.Info("Dependência genérica verificada", map[string]interface{}{
+	m.logger.Info("Generic dependency verified", map[string]interface{}{
 		"dependency": dep.Name,
 		"version":    version,
 	})
@@ -215,23 +215,23 @@ func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependenc
 	return nil
 }
 
-// InstallDependency instala uma dependência específica
+// InstallDependency installs a specific dependency
 func (m *Manager) InstallDependency(ctx context.Context, name, version string) error {
 	checker, exists := m.checkers[name]
 	if !exists {
-		return fmt.Errorf("instalador não disponível para %s", name)
+		return fmt.Errorf("installer not available for %s", name)
 	}
 
-	m.logger.Info("Instalando dependência", map[string]interface{}{
+	m.logger.Info("Installing dependency", map[string]interface{}{
 		"name":    name,
 		"version": version,
 	})
 
 	if err := checker.Install(ctx, version); err != nil {
-		return fmt.Errorf("erro ao instalar %s: %w", name, err)
+		return fmt.Errorf("error installing %s: %w", name, err)
 	}
 
-	m.logger.Info("Dependência instalada com sucesso", map[string]interface{}{
+	m.logger.Info("Dependency installed successfully", map[string]interface{}{
 		"name":    name,
 		"version": version,
 	})
@@ -239,11 +239,11 @@ func (m *Manager) InstallDependency(ctx context.Context, name, version string) e
 	return nil
 }
 
-// GetDependencyPath retorna o path de uma dependência instalada
+// GetDependencyPath returns the path of an installed dependency
 func (m *Manager) GetDependencyPath(name string) (string, error) {
 	checker, exists := m.checkers[name]
 	if !exists {
-		return "", fmt.Errorf("checker não encontrado para %s", name)
+		return "", fmt.Errorf("checker not found for %s", name)
 	}
 
 	return checker.GetPath(), nil

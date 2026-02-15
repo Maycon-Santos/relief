@@ -1,5 +1,5 @@
 name: "hello-world"
-domain: "hello.sofredor.local"
+domain: "hello.local.dev"
 type: "node"
 
 dependencies:

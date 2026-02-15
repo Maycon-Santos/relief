@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/omelete/sofredor-orchestrator/pkg/fileutil"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/pkg/fileutil"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // DB é o wrapper para o banco de dados SQLite
@@ -20,8 +20,8 @@ type DB struct {
 
 // NewDB cria uma nova conexão com o banco de dados
 func NewDB(log *logger.Logger) (*DB, error) {
-	// Caminho do banco: ~/.sofredor/data/orchestrator.db
-	dataDir, err := fileutil.GetSofredorSubDir("data")
+	// Database path: ~/.relief/data/orchestrator.db
+	dataDir, err := fileutil.GetReliefSubDir("data")
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar diretório de dados: %w", err)
 	}

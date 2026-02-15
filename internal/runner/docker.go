@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/internal/domain"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // DockerRunner executa projetos usando Docker/Docker Compose
@@ -29,7 +29,7 @@ func (r *DockerRunner) Start(ctx context.Context, project *domain.Project) error
 	// - Verificar se docker-compose.yml existe
 	// - Gerar docker-compose.yml dinâmico se necessário
 	// - Usar github.com/docker/docker/client para gerenciar containers
-	// - Adicionar labels sofredor.project=<name> aos containers
+	// - Add relief.project=<name> labels to containers
 	
 	r.logger.Info("DockerRunner.Start chamado", map[string]interface{}{
 		"project": project.Name,

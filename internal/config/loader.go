@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/omelete/sofredor-orchestrator/pkg/fileutil"
-	"github.com/omelete/sofredor-orchestrator/pkg/httputil"
+	"github.com/omelete/relief/pkg/fileutil"
+	"github.com/omelete/relief/pkg/httputil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -143,18 +143,18 @@ func defaultConfig() *Config {
 
 // GetConfigPath retorna o caminho do arquivo de configuração principal
 func GetConfigPath() (string, error) {
-	sofredorDir, err := fileutil.GetSofredorDir()
+	reliefDir, err := fileutil.GetReliefDir()
 	if err != nil {
 		return "", err
 	}
-	return sofredorDir + "/config.yaml", nil
+	return reliefDir + "/config.yaml", nil
 }
 
 // GetLocalConfigPath retorna o caminho do arquivo de configuração local (override)
 func GetLocalConfigPath() (string, error) {
-	sofredorDir, err := fileutil.GetSofredorDir()
+	reliefDir, err := fileutil.GetReliefDir()
 	if err != nil {
 		return "", err
 	}
-	return sofredorDir + "/config.local.yaml", nil
+	return reliefDir + "/config.local.yaml", nil
 }

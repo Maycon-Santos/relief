@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🔨 Building Sofredor Orchestrator..."
+echo "🔨 Building Relief Orchestrator..."
 
 # Cores
 GREEN='\033[0;32m'
@@ -26,7 +26,7 @@ for platform in "${PLATFORMS[@]}"; do
     GOOS="${parts[0]}"
     GOARCH="${parts[1]}"
     
-    OUTPUT_NAME="sofredor-orchestrator-${GOOS}-${GOARCH}"
+    OUTPUT_NAME="relief-${GOOS}-${GOARCH}"
     if [ "$GOOS" = "windows" ]; then
         OUTPUT_NAME="${OUTPUT_NAME}.exe"
     fi

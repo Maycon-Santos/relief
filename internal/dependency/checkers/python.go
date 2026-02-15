@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/omelete/sofredor-orchestrator/pkg/fileutil"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/pkg/fileutil"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // PythonChecker verifica e instala Python
@@ -62,8 +62,8 @@ func (c *PythonChecker) Check(ctx context.Context) (string, error) {
 
 // Install instala Python na versão especificada
 func (c *PythonChecker) Install(ctx context.Context, version string) error {
-	// Diretório de instalação: ~/.sofredor/deps/python/<version>
-	depsDir, err := fileutil.GetSofredorSubDir(filepath.Join("deps", "python", version))
+	// Installation directory: ~/.relief/deps/python/<version>
+	depsDir, err := fileutil.GetReliefSubDir(filepath.Join("deps", "python", version))
 	if err != nil {
 		return fmt.Errorf("erro ao criar diretório de deps: %w", err)
 	}

@@ -1,11 +1,11 @@
-// Package domain contém as entidades de negócio da aplicação.
+// Package domain contains the business entities of the application.
 package domain
 
 import (
 	"time"
 )
 
-// ProjectType representa o tipo de um projeto
+// ProjectType represents the type of a project
 type ProjectType string
 
 const (
@@ -17,7 +17,7 @@ const (
 	ProjectTypeRuby   ProjectType = "ruby"
 )
 
-// Status representa o estado atual de um projeto
+// Status represents the current state of a project
 type Status string
 
 const (
@@ -28,7 +28,7 @@ const (
 	StatusUnknown Status = "unknown"
 )
 
-// Project representa um projeto gerenciado pelo orquestrador
+// Project represents a project managed by the orchestrator
 type Project struct {
 	ID           string            `json:"id"`
 	Name         string            `json:"name"`
@@ -47,7 +47,7 @@ type Project struct {
 	LastError    string            `json:"last_error,omitempty"`
 }
 
-// Dependency representa uma dependência de um projeto
+// Dependency represents a dependency of a project
 type Dependency struct {
 	Name            string `json:"name"`
 	Version         string `json:"version"`
@@ -57,7 +57,7 @@ type Dependency struct {
 	Message         string `json:"message,omitempty"`
 }
 
-// LogEntry representa uma entrada de log de um projeto
+// LogEntry represents a log entry of a project
 type LogEntry struct {
 	ID        int64     `json:"id"`
 	ProjectID string    `json:"project_id"`
@@ -66,7 +66,7 @@ type LogEntry struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// NewProject cria uma nova instância de Project
+// NewProject creates a new Project instance
 func NewProject(name, path, domain string, projectType ProjectType) *Project {
 	now := time.Now()
 	return &Project{
@@ -84,41 +84,41 @@ func NewProject(name, path, domain string, projectType ProjectType) *Project {
 	}
 }
 
-// IsRunning verifica se o projeto está em execução
+// IsRunning checks if the project is running
 func (p *Project) IsRunning() bool {
 	return p.Status == StatusRunning
 }
 
-// IsStopped verifica se o projeto está parado
+// IsStopped checks if the project is stopped
 func (p *Project) IsStopped() bool {
 	return p.Status == StatusStopped
 }
 
-// HasError verifica se o projeto está em erro
+// HasError checks if the project is in error state
 func (p *Project) HasError() bool {
 	return p.Status == StatusError
 }
 
-// UpdateStatus atualiza o status do projeto
+// UpdateStatus updates the project status
 func (p *Project) UpdateStatus(status Status) {
 	p.Status = status
 	p.UpdatedAt = time.Now()
 }
 
-// SetError define um erro no projeto
+// SetError sets an error on the project
 func (p *Project) SetError(err error) {
 	p.Status = StatusError
 	p.LastError = err.Error()
 	p.UpdatedAt = time.Now()
 }
 
-// ClearError limpa o erro do projeto
+// ClearError clears the project error
 func (p *Project) ClearError() {
 	p.LastError = ""
 	p.UpdatedAt = time.Now()
 }
 
-// HasUnsatisfiedDependencies verifica se há dependências não satisfeitas
+// HasUnsatisfiedDependencies checks if there are unsatisfied dependencies
 func (p *Project) HasUnsatisfiedDependencies() bool {
 	for _, dep := range p.Dependencies {
 		if !dep.Satisfied {
@@ -128,7 +128,7 @@ func (p *Project) HasUnsatisfiedDependencies() bool {
 	return false
 }
 
-// GetUnsatisfiedDependencies retorna as dependências não satisfeitas
+// GetUnsatisfiedDependencies returns the unsatisfied dependencies
 func (p *Project) GetUnsatisfiedDependencies() []Dependency {
 	unsatisfied := []Dependency{}
 	for _, dep := range p.Dependencies {
@@ -139,9 +139,9 @@ func (p *Project) GetUnsatisfiedDependencies() []Dependency {
 	return unsatisfied
 }
 
-// generateID gera um ID único para o projeto
+// generateID generates a unique ID for the project
 func generateID(name string) string {
-	// Simplificado: usar nome + timestamp
-	// Em produção, usar UUID ou hash
+	// Simplified: use name + timestamp
+	// In production, use UUID or hash
 	return name + "-" + time.Now().Format("20060102150405")
 }

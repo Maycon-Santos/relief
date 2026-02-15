@@ -17,7 +17,7 @@ function App() {
         const data = await api.getStatus();
         setStatus(data);
       } catch (err) {
-        console.error('Erro ao carregar status:', err);
+        console.error('Error loading status:', err);
       }
     };
 
@@ -34,12 +34,12 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <div>
-            <h1 className="app-title">⚡ Sofredor Orchestrator</h1>
-            <p className="app-subtitle">Orquestração de desenvolvimento local híbrida</p>
+            <h1 className="app-title">⚡ Relief Orchestrator</h1>
+            <p className="app-subtitle">Hybrid local development orchestration</p>
           </div>
           <div className="header-actions">
-            <button onClick={refresh} className="btn-secondary" disabled={loading}>
-              🔄 Atualizar
+            <button type="button" onClick={refresh} className="btn-secondary" disabled={loading}>
+              🔄 Refresh
             </button>
           </div>
         </div>
@@ -51,23 +51,23 @@ function App() {
               <span className="status-value">{status.total_projects}</span>
             </div>
             <div className="status-item">
-              <span className="status-label">Rodando:</span>
+              <span className="status-label">Running:</span>
               <span className="status-value status-running">{status.running}</span>
             </div>
             <div className="status-item">
-              <span className="status-label">Parados:</span>
+              <span className="status-label">Stopped:</span>
               <span className="status-value status-stopped">{status.stopped}</span>
             </div>
             {status.errors > 0 && (
               <div className="status-item">
-                <span className="status-label">Erros:</span>
+                <span className="status-label">Errors:</span>
                 <span className="status-value status-error">{status.errors}</span>
               </div>
             )}
             <div className="status-item">
               <span className="status-label">Traefik:</span>
               <span className={`status-value ${status.traefik_running ? 'status-running' : 'status-stopped'}`}>
-                {status.traefik_running ? 'Ativo' : 'Inativo'}
+                {status.traefik_running ? 'Active' : 'Inactive'}
               </span>
             </div>
           </div>
@@ -78,24 +78,24 @@ function App() {
         {loading && projects.length === 0 ? (
           <div className="loading">
             <div className="spinner"></div>
-            <p>Carregando projetos...</p>
+            <p>Loading projects...</p>
           </div>
         ) : error ? (
           <div className="error-box">
-            <h3>❌ Erro</h3>
+            <h3>❌ Error</h3>
             <p>{error}</p>
-            <button onClick={refresh} className="btn-primary">
-              Tentar novamente
+            <button type="button" onClick={refresh} className="btn-primary">
+              Try again
             </button>
           </div>
         ) : projects.length === 0 ? (
           <div className="empty-state">
-            <h2>📦 Nenhum projeto encontrado</h2>
-            <p>Adicione um projeto para começar</p>
+            <h2>📦 No projects found</h2>
+            <p>Add a project to get started</p>
             <div className="empty-state-actions">
-              <button className="btn-primary">+ Adicionar Projeto Local</button>
-              <button className="btn-secondary" onClick={refresh}>
-                🔄 Recarregar
+              <button type="button" className="btn-primary">+ Add Local Project</button>
+              <button type="button" className="btn-secondary" onClick={refresh}>
+                🔄 Reload
               </button>
             </div>
           </div>

@@ -1,11 +1,11 @@
-# Exemplo de configuração remota (upstream) que uma empresa publicaria
-# URL: https://raw.githubusercontent.com/company/configs/main/sofredor.yaml
+# Example remote (upstream) configuration that a company would publish
+# URL: https://raw.githubusercontent.com/company/configs/main/relief.yaml
 
-# Projetos da empresa
+# Company projects
 projects:
   - name: "api-gateway"
     path: "~/projects/api-gateway"
-    domain: "api.sofredor.local"
+    domain: "api.local.dev"
     type: "node"
     port: 3000
     auto_start: true
@@ -24,12 +24,12 @@ projects:
 
   - name: "user-service"
     path: "~/projects/user-service"
-    domain: "users.sofredor.local"
+    domain: "users.local.dev"
     type: "python"
     port: 8000
     auto_start: false
     dependencies:
- - name: "python"
+      - name: "python"
         version: ">=3.9"
       - name: "postgres"
         version: "15"
@@ -43,7 +43,7 @@ projects:
 
   - name: "frontend-app"
     path: "~/projects/frontend-app"
-    domain: "app.sofredor.local"
+    domain: "app.local.dev"
     type: "node"
     port: 5173
     auto_start: false
@@ -54,18 +54,18 @@ projects:
       dev: "npm run dev"
       install: "npm install"
     env:
-      VITE_API_URL: "http://api.sofredor.local"
+      VITE_API_URL: "http://api.local.dev"
 
   - name: "legacy-monolith"
     path: "~/projects/legacy-monolith"
-    domain: "legacy.sofredor.local"
+    domain: "legacy.local.dev"
     type: "docker"
     auto_start: false
     scripts:
       dev: "docker-compose up"
       install: "docker-compose pull"
 
-# Versões padronizadas de ferramentas
+# Standard tool versions
 tools:
   node:
     version: "18.19.0"
@@ -76,7 +76,7 @@ tools:
   traefik:
     version: "2.10.7"
 
-# Configuração padrão do proxy
+# Default proxy configuration
 proxy:
   http_port: 80
   https_port: 443

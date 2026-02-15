@@ -1,4 +1,4 @@
-// Package checkers contém verificadores de dependências específicos.
+// Package checkers contains specific dependency checkers.
 package checkers
 
 import (
@@ -8,26 +8,26 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/omelete/sofredor-orchestrator/pkg/fileutil"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/pkg/fileutil"
+	"github.com/omelete/relief/pkg/logger"
 )
 
-// NodeChecker verifica e instala Node.js
+// NodeChecker verifies and installs Node.js
 type NodeChecker struct {
 	logger *logger.Logger
 	path   string
 }
 
-// NewNodeChecker cria uma nova instância de NodeChecker
+// NewNodeChecker creates a new NodeChecker instance
 func NewNodeChecker(log *logger.Logger) *NodeChecker {
 	return &NodeChecker{
 		logger: log,
 	}
 }
 
-// Check verifica se Node.js está instalado e retorna a versão
+// Check verifies if Node.js is installed and returns the version
 func (c *NodeChecker) Check(ctx context.Context) (string, error) {
-	// Tentar usar path customizado primeiro
+	// Try using custom path first
 	nodeCmd := "node"
 	if c.path != "" {
 		nodeCmd = filepath.Join(c.path, "node")
@@ -36,48 +36,48 @@ func (c *NodeChecker) Check(ctx context.Context) (string, error) {
 	cmd := exec.CommandContext(ctx, nodeCmd, "-v")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("node não encontrado: %w", err)
+		return "", fmt.Errorf("node not found: %w", err)
 	}
 
 	version := strings.TrimSpace(string(output))
-	// Remover 'v' prefix (ex: v18.19.0 -> 18.19.0)
+	// Remove 'v' prefix (e.g.: v18.19.0 -> 18.19.0)
 	version = strings.TrimPrefix(version, "v")
 
-	c.logger.Debug("Node.js encontrado", map[string]interface{}{
+	c.logger.Debug("Node.js found", map[string]interface{}{
 		"version": version,
 	})
 
 	return version, nil
 }
 
-// Install instala Node.js na versão especificada
+// Install installs Node.js in the specified version
 func (c *NodeChecker) Install(ctx context.Context, version string) error {
-	// Diretório de instalação: ~/.sofredor/deps/node/<version>
-	depsDir, err := fileutil.GetSofredorSubDir(filepath.Join("deps", "node", version))
+	// Installation directory: ~/.relief/deps/node/<version>
+	depsDir, err := fileutil.GetReliefSubDir(filepath.Join("deps", "node", version))
 	if err != nil {
-		return fmt.Errorf("erro ao criar diretório de deps: %w", err)
+		return fmt.Errorf("error creating deps directory: %w", err)
 	}
 
 	c.path = depsDir
 
-	// TODO: Implementar download real do Node.js
-	// - Detectar SO (Linux/Mac/Windows)
-	// - Baixar binário portable da URL oficial
-	// - Extrair para depsDir
-	// - Configurar c.path
+	// TODO: Implement real Node.js download
+	// - Detect OS (Linux/Mac/Windows)
+	// - Download portable binary from official URL
+	// - Extract to depsDir
+	// - Configure c.path
 
-	c.logger.Info("Node.js instalação completa", map[string]interface{}{
+	c.logger.Info("Node.js installation complete", map[string]interface{}{
 		"version": version,
 		"path":    depsDir,
 	})
 
-	return fmt.Errorf("instalação automática de Node.js ainda não implementada - por favor instale manualmente")
+	return fmt.Errorf("automatic Node.js installation not yet implemented - please install manually")
 }
 
-// GetPath retorna o path do binário Node.js
+// GetPath returns the path of the Node.js binary
 func (c *NodeChecker) GetPath() string {
 	if c.path == "" {
-		// Tentar encontrar no PATH do sistema
+		// Try to find in system PATH
 		path, err := exec.LookPath("node")
 		if err == nil {
 			return filepath.Dir(path)

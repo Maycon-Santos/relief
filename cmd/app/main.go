@@ -7,19 +7,19 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/omelete/sofredor-orchestrator/internal/app"
+	"github.com/omelete/relief/internal/app"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
-	// Criar instância da aplicação
+	// Create application instance
 	application := app.NewApp()
 
-	// Configurar opções do Wails
+	// Configure Wails options
 	err := wails.Run(&options.App{
-		Title:  "Sofredor Orchestrator",
+		Title:  "Relief Orchestrator",
 		Width:  1280,
 		Height: 800,
 		AssetServer: &assetserver.Options{
@@ -34,6 +34,6 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatal("Erro ao iniciar aplicação:", err)
+		log.Fatal("Error starting application:", err)
 	}
 }

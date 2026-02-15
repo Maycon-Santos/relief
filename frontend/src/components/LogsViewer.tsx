@@ -19,7 +19,7 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
         const data = await api.getProjectLogs(projectId, 500);
         setLogs(data);
       } catch (err) {
-        console.error('Erro ao carregar logs:', err);
+        console.error('Error loading logs:', err);
       }
     };
 
@@ -99,6 +99,7 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
               Auto-scroll
             </label>
             <button
+              type="button"
               onClick={onClose}
               style={{
                 padding: '8px 16px',
@@ -110,7 +111,7 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
                 cursor: 'pointer',
               }}
             >
-              Fechar
+              Close
             </button>
           </div>
         </div>

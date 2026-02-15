@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/internal/domain"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // NativeRunner executa projetos como processos nativos do SO

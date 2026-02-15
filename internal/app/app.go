@@ -5,13 +5,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/omelete/sofredor-orchestrator/internal/config"
-	"github.com/omelete/sofredor-orchestrator/internal/dependency"
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
-	"github.com/omelete/sofredor-orchestrator/internal/proxy"
-	"github.com/omelete/sofredor-orchestrator/internal/runner"
-	"github.com/omelete/sofredor-orchestrator/internal/storage"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/internal/config"
+	"github.com/omelete/relief/internal/dependency"
+	"github.com/omelete/relief/internal/domain"
+	"github.com/omelete/relief/internal/proxy"
+	"github.com/omelete/relief/internal/runner"
+	"github.com/omelete/relief/internal/storage"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // App é a estrutura principal da aplicação
@@ -43,7 +43,7 @@ func (a *App) Startup(ctx context.Context) error {
 
 	// Inicializar logger
 	a.logger = logger.Default()
-	a.logger.Info("Inicializando Sofredor Orchestrator", nil)
+	a.logger.Info("Initializing Relief Orchestrator", nil)
 
 	// Inicializar banco de dados
 	db, err := storage.NewDB(a.logger)
@@ -98,13 +98,13 @@ func (a *App) Startup(ctx context.Context) error {
 	// Inicializar hosts manager
 	a. hostsMgr = proxy.NewHostsManager(a.logger)
 
-	a.logger.Info("Sofredor Orchestrator iniciado com sucesso", nil)
+	a.logger.Info("Relief Orchestrator started successfully", nil)
 	return nil
 }
 
 // Shutdown é chamado quando a aplicação fecha
 func (a *App) Shutdown(ctx context.Context) error {
-	a.logger.Info("Encerrando Sofredor Orchestrator", nil)
+	a.logger.Info("Shutting down Relief Orchestrator", nil)
 
 	// Parar todos os projetos em execução
 	projects, _ := a.projectRepo.List()

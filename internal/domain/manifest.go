@@ -1,4 +1,4 @@
-// Package domain contém as entidades de negócio da aplicação.
+// Package domain contains the business entities of the application.
 package domain
 
 import (
@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Manifest representa o arquivo sofredor.yaml de um projeto
+// Manifest represents the relief.yaml file of a project
 type Manifest struct {
 	Name         string                 `yaml:"name"`
 	Domain       string                 `yaml:"domain"`
@@ -23,52 +23,52 @@ type Manifest struct {
 	Extra        map[string]interface{} `yaml:",inline"`
 }
 
-// ManifestDependency representa uma dependência no manifest
+// ManifestDependency represents a dependency in the manifest
 type ManifestDependency struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
 	Managed bool   `yaml:"managed"`
 }
 
-// ParseManifest lê e faz parse do arquivo sofredor.yaml
+//ParseManifest reads and parses the relief.yaml file
 func ParseManifest(projectPath string) (*Manifest, error) {
-	manifestPath := filepath.Join(projectPath, "sofredor.yaml")
+	manifestPath := filepath.Join(projectPath, "relief.yaml")
 
-	// Verificar se arquivo existe
+	// Check if file exists
 	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("arquivo sofredor.yaml não encontrado em %s", projectPath)
+		return nil, fmt.Errorf("relief.yaml file not found in %s", projectPath)
 	}
 
-	// Ler arquivo
+	// Read file
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao ler sofredor.yaml: %w", err)
+		return nil, fmt.Errorf("error reading relief.yaml: %w", err)
 	}
 
 	// Parse YAML
 	var manifest Manifest
 	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("erro ao fazer parse do sofredor.yaml: %w", err)
+		return nil, fmt.Errorf("error parsing relief.yaml: %w", err)
 	}
 
-	// Validação básica
+	// Basic validation
 	if err := manifest.Validate(); err != nil {
-		return nil, fmt.Errorf("manifest inválido: %w", err)
+		return nil, fmt.Errorf("invalid manifest: %w", err)
 	}
 
 	return &manifest, nil
 }
 
-// Validate valida o manifest
+// Validate validates the manifest
 func (m *Manifest) Validate() error {
 	if m.Name == "" {
-		return fmt.Errorf("campo 'name' é obrigatório")
+		return fmt.Errorf("'name' field is required")
 	}
 	if m.Type == "" {
-		return fmt.Errorf("campo 'type' é obrigatório")
+		return fmt.Errorf("'type' field is required")
 	}
 
-	// Validar tipo
+	// Validate type
 	validTypes := map[string]bool{
 		"docker": true,
 		"node":   true,
@@ -78,13 +78,13 @@ func (m *Manifest) Validate() error {
 		"ruby":   true,
 	}
 	if !validTypes[m.Type] {
-		return fmt.Errorf("tipo '%s' não é válido", m.Type)
+		return fmt.Errorf("type '%s' is not valid", m.Type)
 	}
 
 	return nil
 }
 
-// GetDevScript retorna o script de desenvolvimento
+// GetDevScript returns the development script
 func (m *Manifest) GetDevScript() string {
 	if script, ok := m.Scripts["dev"]; ok {
 		return script
@@ -92,7 +92,7 @@ func (m *Manifest) GetDevScript() string {
 	return ""
 }
 
-// GetInstallScript retorna o script de instalação
+// GetInstallScript returns the installation script
 func (m *Manifest) GetInstallScript() string {
 	if script, ok := m.Scripts["install"]; ok {
 		return script
@@ -100,7 +100,7 @@ func (m *Manifest) GetInstallScript() string {
 	return ""
 }
 
-// HasDependency verifica se o manifest tem uma dependência específica
+// HasDependency checks if the manifest has a specific dependency
 func (m *Manifest) HasDependency(name string) bool {
 	for _, dep := range m.Dependencies {
 		if dep.Name == name {
@@ -110,7 +110,7 @@ func (m *Manifest) HasDependency(name string) bool {
 	return false
 }
 
-// GetDependency retorna uma dependência específica
+// GetDependency returns a specific dependency
 func (m *Manifest) GetDependency(name string) *ManifestDependency {
 	for i := range m.Dependencies {
 		if m.Dependencies[i].Name == name {
@@ -120,7 +120,7 @@ func (m *Manifest) GetDependency(name string) *ManifestDependency {
 	return nil
 }
 
-// ToProject converte o manifest em um Project
+// ToProject converts the manifest into a Project
 func (m *Manifest) ToProject(path string) *Project {
 	projectType := ProjectType(m.Type)
 	project := NewProject(m.Name, path, m.Domain, projectType)
@@ -129,47 +129,47 @@ func (m *Manifest) ToProject(path string) *Project {
 	project.Env = m.Env
 	project.Manifest = m
 
-	// Converter dependências
+	// Convert dependencies
 	for _, dep := range m.Dependencies {
 		project.Dependencies = append(project.Dependencies, Dependency{
 			Name:            dep.Name,
 			RequiredVersion: dep.Version,
 			Managed:         dep.Managed,
-			Satisfied:       false, // Será verificado posteriormente
+			Satisfied:       false, // Will be verified later
 		})
 	}
 
 	return project
 }
 
-// SaveManifest salva o manifest em um arquivo
+// SaveManifest saves the manifest to a file
 func (m *Manifest) SaveManifest(projectPath string) error {
-	manifestPath := filepath.Join(projectPath, "sofredor.yaml")
+	manifestPath := filepath.Join(projectPath, "relief.yaml")
 
 	data, err := yaml.Marshal(m)
 	if err != nil {
-		return fmt.Errorf("erro ao serializar manifest: %w", err)
+		return fmt.Errorf("error serializing manifest: %w", err)
 	}
 
 	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
-		return fmt.Errorf("erro ao salvar manifest: %w", err)
+		return fmt.Errorf("error saving manifest: %w", err)
 	}
 
 	return nil
 }
 
-// CreateDefaultManifest cria um manifest padrão para um projeto
+// CreateDefaultManifest creates a default manifest for a project
 func CreateDefaultManifest(name, projectType string) *Manifest {
 	manifest := &Manifest{
 		Name:         name,
-		Domain:       name + ".sofredor.local",
+		Domain:       name + ".local.dev",
 		Type:         projectType,
 		Dependencies: []ManifestDependency{},
 		Scripts:      make(map[string]string),
 		Env:          make(map[string]string),
 	}
 
-	// Scripts padrão baseados no tipo
+	// Default scripts based on type
 	switch projectType {
 	case "node":
 		manifest.Scripts["dev"] = "npm run dev"

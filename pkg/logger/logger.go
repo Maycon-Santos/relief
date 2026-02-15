@@ -1,4 +1,4 @@
-// Package logger fornece logging estruturado para toda a aplicação.
+// Package logger provides structured logging for the entire application.
 package logger
 
 import (
@@ -10,24 +10,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Logger é um wrapper em torno do zerolog.Logger
+// Logger is a wrapper around zerolog.Logger
 type Logger struct {
 	logger zerolog.Logger
 }
 
-// New cria uma nova instância de Logger
+// New creates a new Logger instance
 func New(level string, output io.Writer) *Logger {
 	if output == nil {
 		output = os.Stdout
 	}
 
-	// Configurar output formatado para desenvolvimento
+	// Configure formatted output for development
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        output,
 		TimeFormat: time.RFC3339,
 	}
 
-	// Determinar nível de log
+	// Determine log level
 	logLevel := zerolog.InfoLevel
 	switch level {
 	case "debug":
@@ -50,12 +50,12 @@ func New(level string, output io.Writer) *Logger {
 	return &Logger{logger: logger}
 }
 
-// Default retorna o logger padrão da aplicação
+// Default returns the application's default logger
 func Default() *Logger {
 	return New("info", os.Stdout)
 }
 
-// Debug registra uma mensagem de debug
+// Debug logs a debug message
 func (l *Logger) Debug(msg string, fields map[string]interface{}) {
 	event := l.logger.Debug()
 	for k, v := range fields {
@@ -64,7 +64,7 @@ func (l *Logger) Debug(msg string, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-// Info registra uma mensagem informativa
+// Info logs an informational message
 func (l *Logger) Info(msg string, fields map[string]interface{}) {
 	event := l.logger.Info()
 	for k, v := range fields {
@@ -73,7 +73,7 @@ func (l *Logger) Info(msg string, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-// Warn registra uma mensagem de aviso
+// Warn logs a warning message
 func (l *Logger) Warn(msg string, fields map[string]interface{}) {
 	event := l.logger.Warn()
 	for k, v := range fields {
@@ -82,7 +82,7 @@ func (l *Logger) Warn(msg string, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-// Error registra uma mensagem de erro
+// Error logs an error message
 func (l *Logger) Error(msg string, err error, fields map[string]interface{}) {
 	event := l.logger.Error()
 	if err != nil {
@@ -94,7 +94,7 @@ func (l *Logger) Error(msg string, err error, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-// Fatal registra uma mensagem fatal e encerra a aplicação
+// Fatal logs a fatal message and exits the application
 func (l *Logger) Fatal(msg string, err error, fields map[string]interface{}) {
 	event := l.logger.Fatal()
 	if err != nil {
@@ -106,7 +106,7 @@ func (l *Logger) Fatal(msg string, err error, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-// With cria um logger filho com campos adicionais
+// With creates a child logger with additional fields
 func (l *Logger) With(fields map[string]interface{}) *Logger {
 	logger := l.logger.With()
 	for k, v := range fields {
@@ -115,7 +115,7 @@ func (l *Logger) With(fields map[string]interface{}) *Logger {
 	return &Logger{logger: logger.Logger()}
 }
 
-// SetGlobalLogger define o logger global do zerolog
+// SetGlobalLogger sets the global zerolog logger
 func SetGlobalLogger(l *Logger) {
 	log.Logger = l.logger
 }

@@ -29,7 +29,7 @@ export function ProjectCard({
       setError(null);
       await action();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Erro ao ${actionName}`);
+      setError(err instanceof Error ? err.message : `Error on ${actionName}`);
     } finally {
       setLoading(false);
     }
@@ -104,6 +104,7 @@ export function ProjectCard({
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {project.status === 'stopped' && (
           <button
+            type="button"
             onClick={() => handleAction(onStart, 'iniciar')}
             disabled={loading}
             style={{
@@ -125,6 +126,7 @@ export function ProjectCard({
         {project.status === 'running' && (
           <>
             <button
+              type="button"
               onClick={() => handleAction(onStop, 'parar')}
               disabled={loading}
               style={{
@@ -143,6 +145,7 @@ export function ProjectCard({
             </button>
 
             <button
+              type="button"
               onClick={() => handleAction(onRestart, 'reiniciar')}
               disabled={loading}
               style={{
@@ -161,6 +164,7 @@ export function ProjectCard({
             </button>
 
             <button
+              type="button"
               onClick={onViewLogs}
               style={{
                 padding: '8px 16px',
@@ -173,12 +177,13 @@ export function ProjectCard({
                 cursor: 'pointer',
               }}
             >
-              Ver Logs
+              View Logs
             </button>
           </>
         )}
 
         <button
+          type="button"
           onClick={() => handleAction(onRemove, 'remover')}
           disabled={loading || project.status === 'running'}
           style={{
@@ -194,7 +199,7 @@ export function ProjectCard({
             marginLeft: 'auto',
           }}
         >
-          Remover
+          Remove
         </button>
       </div>
     </div>

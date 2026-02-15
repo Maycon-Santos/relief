@@ -4,7 +4,7 @@ const PORT = process.env.PORT || 3000;
 
 const server = http.createServer((req, res) => {
   const response = {
-    message: 'Hello from SofredorOrchestrator!',
+    message: 'Hello from Relief Orchestrator!',
     project: 'hello-world',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production',
@@ -18,7 +18,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`🚀 Hello World server running on http://localhost:${PORT}`);
-  console.log(`📝 Try accessing: http://hello.sofredor.local`);
+  console.log(`📝 Try accessing: http://hello.local.dev`);
 });
 
 // Graceful shutdown

@@ -14,8 +14,8 @@ export function useProjects() {
       const data = await api.getProjects();
       setProjects(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar projetos');
-      console.error('Erro ao carregar projetos:', err);
+      setError(err instanceof Error ? err.message : 'Error loading projects');
+      console.error('Error loading projects:', err);
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,7 @@ export function useProjects() {
       await api.startProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao iniciar projeto');
+      throw new Error(err instanceof Error ? err.message : 'Error starting project');
     }
   };
 
@@ -44,7 +44,7 @@ export function useProjects() {
       await api.stopProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao parar projeto');
+      throw new Error(err instanceof Error ? err.message : 'Error stopping project');
     }
   };
 
@@ -53,7 +53,7 @@ export function useProjects() {
       await api.restartProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao reiniciar projeto');
+      throw new Error(err instanceof Error ? err.message : 'Error restarting project');
     }
   };
 
@@ -62,7 +62,7 @@ export function useProjects() {
       await api.removeProject(id);
       await loadProjects();
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Erro ao remover projeto');
+      throw new Error(err instanceof Error ? err.message : 'Error removing project');
     }
   };
 

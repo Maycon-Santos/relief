@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/omelete/sofredor-orchestrator/pkg/fileutil"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/pkg/fileutil"
+	"github.com/omelete/relief/pkg/logger"
 )
 
 // HostsManager gerencia entradas no arquivo /etc/hosts
@@ -93,8 +93,8 @@ func (h *HostsManager) RemoveEntry(domain string) error {
 	newLines := []string{}
 	
 	for _, line := range lines {
-		// Pular linhas que contém o domínio e tem marcador SOFREDOR
-		if strings.Contains(line, domain) && strings.Contains(line, "# SOFREDOR") {
+		// Skip lines containing domain with RELIEF marker
+		if strings.Contains(line, domain) && strings.Contains(line, "# RELIEF") {
 			continue
 		}
 		newLines = append(newLines, line)
@@ -130,7 +130,7 @@ func (h *HostsManager) HasEntry(domain string) (bool, error) {
 	return false, nil
 }
 
-// ListEntries retorna todas as entradas do Sofredor
+// ListEntries returns all Relief entries
 func (h *HostsManager) ListEntries() ([]string, error) {
 	content, err := os.ReadFile(h.hostsPath)
 	if err != nil {
@@ -141,7 +141,7 @@ func (h *HostsManager) ListEntries() ([]string, error) {
 	lines := strings.Split(string(content), "\n")
 	
 	for _, line := range lines {
-		if strings.Contains(line, "# SOFREDOR") {
+		if strings.Contains(line, "# RELIEF") {
 			// Extrair domínio
 			parts := strings.Fields(line)
 			if len(parts) >= 2 {
@@ -153,7 +153,7 @@ func (h *HostsManager) ListEntries() ([]string, error) {
 	return entries, nil
 }
 
-// CleanupAll remove todas as entradas do Sofredor
+// CleanupAll removes all Relief entries
 func (h *HostsManager) CleanupAll() error {
 	h.logger.Info("Limpando todas as entradas do hosts", nil)
 
@@ -163,22 +163,22 @@ func (h *HostsManager) CleanupAll() error {
 		return fmt.Errorf("erro ao ler arquivo hosts: %w", err)
 	}
 
-	// Remover bloco SOFREDOR
+	// Remove RELIEF block
 	contentStr := string(content)
 	lines := strings.Split(contentStr, "\n")
 	newLines := []string{}
-	inSofredorBlock := false
+	inReliefBlock := false
 
 	for _, line := range lines {
-		if strings.Contains(line, "# BEGIN SOFREDOR") {
-			inSofredorBlock = true
+		if strings.Contains(line, "# BEGIN RELIEF") {
+			inReliefBlock = true
 			continue
 		}
-		if strings.Contains(line, "# END SOFREDOR") {
-			inSofredorBlock = false
+		if strings.Contains(line, "# END RELIEF") {
+			inReliefBlock = false
 			continue
 		}
-		if !inSofredorBlock {
+		if !inReliefBlock {
 			newLines = append(newLines, line)
 		}
 	}

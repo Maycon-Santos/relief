@@ -14,7 +14,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
       case 'starting':
         return { color: '#f59e0b', label: 'Iniciando' };
       case 'error':
-        return { color: '#ef4444', label: 'Erro' };
+        return { color: '#ef4444', label: 'Error' };
       default:
         return { color: '#9ca3af', label: 'Desconhecido' };
     }

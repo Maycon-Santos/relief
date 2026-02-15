@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
-	"github.com/omelete/sofredor-orchestrator/pkg/fileutil"
-	"github.com/omelete/sofredor-orchestrator/pkg/logger"
+	"github.com/omelete/relief/internal/domain"
+	"github.com/omelete/relief/pkg/fileutil"
+	"github.com/omelete/relief/pkg/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,16 +30,16 @@ type TraefikManager struct {
 
 // NewTraefikManager cria uma nova instância de TraefikManager
 func NewTraefikManager(httpPort, httpsPort int, log *logger.Logger) (*TraefikManager, error) {
-	// Diretório de config: ~/.sofredor/traefik
-	traefikDir, err := fileutil.GetSofredorSubDir("traefik")
+	// Config directory: ~/.relief/traefik
+	traefikDir, err := fileutil.GetReliefSubDir("traefik")
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar diretório traefik: %w", err)
 	}
 
 	configPath := filepath.Join(traefikDir, "dynamic.yaml")
 	
-	// Binário: ~/.sofredor/bin/traefik
-	binDir, err := fileutil.GetSofredorSubDir("bin")
+	// Binary: ~/.relief/bin/traefik
+	binDir, err := fileutil.GetReliefSubDir("bin")
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar diretório bin: %w", err)
 	}

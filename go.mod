@@ -1,4 +1,4 @@
-module github.com/omelete/sofredor-orchestrator
+module github.com/omelete/relief
 
 go 1.22
 

@@ -1,182 +1,176 @@
-# Schema do sofredor.yaml
+# relief.yaml Schema
 
-O arquivo `sofredor.yaml` é o manifesto de configuração de cada projeto. Ele deve ficar na raiz do projeto.
+The `relief.yaml` file is the configuration manifest for each project. It should be placed in the project root.
 
-## Estrutura Completa
+---
+
+## Complete Example
 
 ```yaml
-# Nome do projeto (obrigatório)
-name: "my-service"
+# Project name (required)
+name: "my-api"
 
-# Domínio local (opcional, padrão: <name>.sofredor.local)
-domain: "api.sofredor.local"
+# Local domain (optional, default: <name>.local.dev)
+domain: "api.local.dev"
 
-# Tipo do projeto (obrigatório)
-# Valores: docker, node, python, java, go, ruby
+# Project type (required): node, python, go, ruby, java, docker, etc.
 type: "node"
 
-# Dependências de runtime (opcional)
+# Port (optional, auto-assigned if not specified)
+port: 3000
+
+# Auto-start on orchestrator startup (optional, default: false)
+auto_start: true
+
+# Dependencies (optional)
 dependencies:
   - name: "node"
-    version: ">=18.0.0"  # Operadores: >=, >, <=, <, =
-    managed: false        # Se true, orquestrador tenta instalar
-
+    version: ">=18.0.0"
+    managed: false  # If true, Relief will install
   - name: "postgres"
-    version: "15"
-    managed: true         # Orquestrador gerencia via Docker
+    version: "14"
+    managed: true
 
-# Scripts de execução (obrigatório para tipos não-docker)
+# Execution scripts (required)
 scripts:
-  dev: "npm run dev"      # Script principal de desenvolvimento
-  install: "npm ci"       # Script de instalação de dependências
-  build: "npm run build"  # Script de build (opcional)
-  test: "npm test"        # Script de testes (opcional)
+  dev: "npm run dev"              # Development script
+  install: "npm ci"               # Dependency installation
+  build: "npm run build"          # Build (optional)
+  test: "npm test"                # Tests (optional)
 
-# Variáveis de ambiente (opcional)
+# Environment variables (optional)
 env:
   PORT: "3000"
   NODE_ENV: "development"
   DATABASE_URL: "postgresql://localhost:5432/mydb"
 
-# Portas expostas (opcional, usado por DockerRunner)
-ports:
-  http: 3000
-  metrics: 9090
-
-# Volumes Docker (opcional, usado por DockerRunner)
-volumes:
-  - "./data:/app/data"
-  - "/var/log/app:/logs"
-
-# Networks Docker (opcional, usado por DockerRunner)
-networks:
-  - "sofredor-network"
+# Docker-specific (only for type: docker)
+docker:
+  image: "node:18-alpine"
+  dockerfile: "./Dockerfile"       # Or custom Dockerfile
+  build_args:
+    NODE_VERSION: "18"
+  volumes:
+    - "./src:/app/src"
+    - "/app/node_modules"
+  ports:
+    - "3000:3000"
+  networks:
+    - "relief-network"
 ```
 
-## Campos Detalhados
+---
 
-### `name` (obrigatório)
-- **Tipo:** string
-- **Descrição:** Identificador único do projeto
-- **Exemplo:** `"api-gateway"`
+## Field Reference
 
-### `domain` (opcional)
-- **Tipo:** string
-- **Descrição:** Domínio local para acessar o serviço
-- **Padrão:** `<name>.sofredor.local`
-- **Exemplo:** `"api.sofredor.local"`
+### `name` (required)
+- **Type:** `string`
+- **Description:** Unique project identifier
+- **Example:** `"my-api"`
 
-### `type` (obrigatório)
-- **Tipo:** enum
-- **Valores:**
-  - `docker`: Usa Docker Compose
-  - `node`: Projeto Node.js
-  - `python`: Projeto Python
-  - `java`: Projeto Java
-  - `go`: Projeto Go
-  - `ruby`: Projeto Ruby
-- **Exemplo:** `"node"`
+### `domain` (optional)
+- **Type:** `string`
+- **Default:** `<name>.local.dev`
+- **Description:** Local domain for proxied access
+- **Example:** `"api.local.dev"`
 
-### `dependencies` (opcional)
-Array de dependências de runtime.
+### `type` (required)
+- **Type:** `string`
+- **Options:** `node`, `python`, `go`, `ruby`, `java`, `docker`, `static`
+- **Description:** Project technology type
+- **Example:** `"node"`
 
-#### Campos:
-- `name`: Nome da ferramenta (`node`, `python`, `postgres`, etc)
-- `version`: Versão requerida (suporta operadores semver)
-- `managed`: Booleano indicando se o orquestrador deve gerenciar
+### `port` (optional)
+- **Type:** `integer`
+- **Description:** Port where the project will run
+- **Default:** Auto-assigned (3000+)
+- **Example:** `3000`
 
-**Operadores de Versão:**
+### `auto_start` (optional)
+- **Type:** `boolean`
+- **Default:** `false`
+- **Description:** If true, starts automatically with Relief
+- **Example:** `true`
+
+### `dependencies` (optional)
+- **Type:** `array of Dependency`
+- **Description:** List of required dependencies
+- **Example:**
+  ```yaml
+  dependencies:
+    - name: "node"
+      version: ">=18.0.0"
+      managed: false
+  ```
+
+#### Dependency Object
 ```yaml
-version: ">=18.0.0"  # Maior ou igual a 18.0.0
-version: ">3.9"      # Maior que 3.9
-version: "15"        # Exatamente 15.x
-version: "=3.11.7"   # Exatamente 3.11.7
+name: string        # Dependency name (node, python, postgres, etc.)
+version: string     # Semantic version (>=X.Y.Z, ~X.Y, ^X.Y, =X.Y.Z)
+managed: boolean    # If true, Relief manages installation
 ```
 
-### `scripts` (obrigatório para non-docker)
-Comandos de shell para diferentes operações.
+### `scripts` (required)
+- **Type:** `object`
+- **Description:** Execution commands
+- **Required fields:**
+  - `dev`: Development script
+  - `install`: Dependency installation
+- **Optional fields:**
+  - `build`: Build script
+  - `test`: Test script
+  - `lint`: Linting script
 
-**Scripts Comuns:**
-- `dev`: Inicia o servidor de desenvolvimento
-- `install`: Instala dependências
-- `build`: Compila o projeto
-- `test`: Executa testes
-
-**Exemplos:**
-
-Node.js:
+**Example:**
 ```yaml
 scripts:
   dev: "npm run dev"
   install: "npm ci"
+  build: "npm run build"
+  test: "npm test"
 ```
 
-Python:
+### `env` (optional)
+- **Type:** `object (key-value)`
+- **Description:** Environment variables injected at runtime
+- **Example:**
+  ```yaml
+  env:
+    PORT: "3000"
+    NODE_ENV: "development"
+    API_KEY: "${API_KEY}"  # Interpolation from system env
+  ```
+
+### `docker` (optional, only for `type: docker`)
+- **Type:** `object`
+- **Description:** Docker-specific configuration
+
+#### Docker Fields
 ```yaml
-scripts:
-  dev: "uvicorn main:app --reload"
-  install: "pip install -r requirements.txt"
+docker:
+  image: string          # Docker image (if not using Dockerfile)
+  dockerfile: string     # Path to custom Dockerfile
+  build_args: object     # Build arguments
+  volumes: array         # Volume mounts
+  ports: array           # Port mappings
+  networks: array        # Docker networks
+  environment: object    # Docker env vars (in addition to `env`)
 ```
 
-Go:
-```yaml
-scripts:
-  dev: "air"  # Requer github.com/cosmtrek/air
-  install: "go mod download"
-```
+---
 
-### `env` (opcional)
-Variáveis de ambiente injetadas no processo.
+## Examples by Type
+
+### Node.js API
 
 ```yaml
-env:
-  PORT: "3000"
-  NODE_ENV: "development"
-  LOG_LEVEL: "debug"
-  API_KEY: "${API_KEY}"  # Lê da env do sistema
-```
-
-### `ports` (opcional)
-Mapeamento de portas (usado principalmente por Docker).
-
-```yaml
-ports:
-  http: 3000
-  https: 3443
-  metrics: 9090
-```
-
-### `volumes` (opcional)
-Volumes Docker (apenas para `type: docker`).
-
-```yaml
-volumes:
-  - "./local:/container"  # Path relativo
-  - "/absolute:/path"     # Path absoluto
-```
-
-### `networks` (opcional)
-Networks Docker (apenas para `type: docker`).
-
-```yaml
-networks:
-  - "sofredor-network"
-  - "database-network"
-```
-
-## Exemplos por Tipo
-
-### Node.js + PostgreSQL
-
-```yaml
-name: "user-api"
-domain: "users.sofredor.local"
+name: "users-api"
+domain: "users.local.dev"
 type: "node"
 
 dependencies:
   - name: "node"
     version: ">=18.0.0"
-    managed: false
   - name: "postgres"
     version: "15"
     managed: true
@@ -187,56 +181,83 @@ scripts:
   test: "npm test"
 
 env:
-  PORT: "3000"
-  NODE_ENV: "development"
+  PORT: "3001"
   DATABASE_URL: "postgresql://localhost:5432/users"
+  JWT_SECRET: "${JWT_SECRET}"
 ```
 
-### Python FastAPI
+### Python Django
 
 ```yaml
-name: "ml-service"
-domain: "ml.sofredor.local"
+name: "admin-panel"
+domain: "admin.local.dev"
 type: "python"
 
 dependencies:
   - name: "python"
     version: ">=3.9"
-    managed: false
 
 scripts:
-  dev: "uvicorn main:app --reload --port 8000"
+  dev: "python manage.py runserver 0.0.0.0:8000"
   install: "pip install -r requirements.txt"
+  test: "python manage.py test"
 
 env:
   PORT: "8000"
-  PYTHONUNBUFFERED: "1"
-  MODEL_PATH: "./models"
+  DJANGO_SETTINGS_MODULE: "project.settings.dev"
+  DATABASE_URL: "postgresql://localhost:5432/admin"
 ```
 
-### Docker Compose
+### Go API
 
 ```yaml
-name: "legacy-monolith"
-domain: "legacy.sofredor.local"
-type: "docker"
+name: "ml-service"
+domain: "ml.local.dev"
+type: "go"
+
+dependencies:
+  - name: "go"
+    version: ">=1.22"
 
 scripts:
-  dev: "docker-compose up"
-  install: "docker-compose pull"
+  dev: "go run cmd/server/main.go"
+  install: "go mod download"
+  build: "go build -o bin/server cmd/server/main.go"
+  test: "go test ./..."
 
-volumes:
-  - "./data:/app/data"
-
-networks:
-  - "app-network"
+env:
+  PORT: "8080"
+  ENV: "development"
 ```
 
-### Frontend React + Vite
+### Ruby on Rails
+
+```yaml
+name: "legacy-app"
+domain: "legacy.local.dev"
+type: "ruby"
+
+dependencies:
+  - name: "ruby"
+    version: "~3.2"
+  - name: "postgres"
+    version: "14"
+
+scripts:
+  dev: "rails server -b 0.0.0.0 -p 3000"
+  install: "bundle install"
+  test: "rspec"
+
+env:
+  PORT: "3000"
+  RAILS_ENV: "development"
+```
+
+### Frontend (Vite/React)
 
 ```yaml
 name: "frontend-app"
-domain: "app.sofredor.local"
+domain: "app.local.dev"
 type: "node"
 
 dependencies:
@@ -249,81 +270,216 @@ scripts:
   build: "npm run build"
 
 env:
-  VITE_API_URL: "http://api.sofredor.local"
-  VITE_PORT: "5173"
+  PORT: "5173"
+  VITE_API_URL: "http://api.local.dev"
+  VITE_ENV: "development"
 ```
 
-## Validação
+### Docker Compose
 
-O orquestrador valida o manifest ao carregar o projeto:
+```yaml
+name: "microservices"
+domain: "micro.local.dev"
+type: "docker"
 
-1. **Campos obrigatórios:** `name`, `type`
-2. **Tipo válido:** Deve ser um dos tipos suportados
-3. **Scripts presentes:** Para tipos non-docker, `dev` é obrigatório
-4. **Formato de versões:** Deve seguir semver
+scripts:
+  dev: "docker-compose up"
+  install: "docker-compose pull"
+  build: "docker-compose build"
 
-Erros de validação são exibidos na UI com mensagens claras.
+docker:
+  dockerfile: "./docker-compose.yml"
+```
 
-## Boas Práticas
+---
 
-1. **Use versões específicas:** Preferir `>=18.0.0` a `18`
-2. **Configure managed=true:** Para dependências de dev (PostgreSQL, Redis)
-3. **Documente env vars:** Adicione comentários no YAML
-4. **Teste localmente:** Verifique que scripts funcionam antes de commitar
-5. **Versionamento:** Commite o `sofredor.yaml` no git
+## Best Practices
 
-## Migrando de Outras Ferramentas
+### 1. Version Control
+- **Commit `relief.yaml`** to git
+- **DO NOT commit `config.local.yaml`** (secrets)
+- Use `.gitignore` for sensitive configs
 
-### De docker-compose.yml
+### 2. Environment Variables
+- Use `${VAR}` for interpolation from system
+- Store secrets in `~/.relief/config.local.yaml`
+- Never hardcode credentials
+
+### 3. Dependencies
+- **Specify exact versions** in production (`=X.Y.Z`)
+- **Use ranges** in development (`>=X.Y.Z`)
+- **Prefer `managed: false`** for system tools
+
+### 4. Scripts
+- **Keep scripts simple** (single command)
+- **Use npm scripts / Makefile** for complex workflows
+- **Ensure `dev` script runs continuously**
+
+### 5. Domain Naming
+- Use `.local.dev` suffix
+- Keep names short and descriptive
+- Avoid special characters
+
+---
+
+## Validation Rules
+
+Relief validates the manifest automatically:
+
+- ✅ `name` must be present and non-empty
+- ✅ `type` must be a valid type
+- ✅ `scripts.dev` must be present
+- ✅ `scripts.install` must be present
+- ✅ `domain` must be valid domain format
+- ✅ `port` must be between 1024-65535
+- ✅ Dependency versions must be valid semver
+
+---
+
+## Migration from Other Tools
+
+### From Docker Compose
+
 ```yaml
 # docker-compose.yml
 services:
   api:
-    build: .
+    image: node:18
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
+      NODE_ENV: development
+```
 
-# sofredor.yaml equivalente
+**relief.yaml equivalent:**
+```yaml
 name: "api"
+domain: "api.local.dev"
 type: "docker"
-scripts:
-  dev: "docker-compose up"
+port: 3000
+
+docker:
+  image: "node:18"
+  ports:
+    - "3000:3000"
+
 env:
   NODE_ENV: "development"
+
+scripts:
+  dev: "docker run -it --rm -p 3000:3000 node:18"
+  install: "docker pull node:18"
 ```
 
-### De package.json scripts
-```json
-{
-  "scripts": {
-    "dev": "nodemon index.js",
-    "start": "node index.js"
-  }
-}
+### From Procfile (Heroku)
+
+```
+# Procfile
+web: npm start
+worker: npm run worker
 ```
 
+**relief.yaml:**
 ```yaml
-# sofredor.yaml
 name: "my-app"
 type: "node"
+
 scripts:
-  dev: "npm run dev"
+  dev: "npm start"    # Only web process
+  install: "npm ci"
 ```
+
+---
 
 ## Troubleshooting
 
-### Script não executa
-- **Verifique o path:** Scripts executam na raiz do projeto
-- **Permissões:** Binários devem ter permissão de execução
-- **Shell:** Scripts são executados via `sh -c`
+### Manifest not found
 
-### Dependência não satisfeita
-- **Versão instalada:** Verifique com `node -v`, `python --version`, etc
-- **PATH correto:** Tool deve estar no PATH do sistema
-- **managed=true:** Deixe o orquestrador instalar
+**Error:** `relief.yaml file not found`
 
-### Porta em uso
-- **Altere PORT:** Mude a variável `env.PORT`
-- **Verifique conflitos:** `lsof -i :3000` (Linux/Mac)
+**Solution:** Ensure file is in project root:
+```bash
+cd my-project
+ls -la relief.yaml  # Must exist
+```
+
+### Invalid YAML syntax
+
+**Error:** `error parsing relief.yaml`
+
+**Solution:** Validate YAML:
+```bash
+yamllint relief.yaml
+```
+
+### Dependency not found
+
+**Error:** `dependency 'node' not found`
+
+**Solution:**
+1. Install Node.js on your system
+2. Or set `managed: true` (future feature)
+
+### Port already in use
+
+**Error:** `port 3000 already in use`
+
+**Solution:**
+1. Change port in `relief.yaml`:
+   ```yaml
+   env:
+     PORT: "3001"
+   ```
+2. Or stop conflicting process
+
+---
+
+## Advanced
+
+### Multi-service Projects
+
+For projects with multiple services, create separate `relief.yaml` files:
+
+```
+/my-app
+├── backend/
+│   └── relief.yaml      # API service
+├── frontend/
+│   └── relief.yaml      # Web app
+└── worker/
+    └── relief.yaml      # Background jobs
+```
+
+### Dynamic Configuration
+
+Use environment variable interpolation:
+
+```yaml
+env:
+  DATABASE_URL: "${DATABASE_URL}"
+  API_KEY: "${MY_API_KEY}"
+  DEBUG: "${DEBUG:-false}"  # Default value
+```
+
+### Conditional Environments
+
+Relief doesn't support conditionals directly. Use different config files:
+
+```
+relief.yaml           # Development
+relief.prod.yaml      # Production (manually copy)
+```
+
+---
+
+## Schema Version
+
+Current schema version: **1.0.0**
+
+Future versions will maintain backward compatibility.
+
+---
+
+## Support
+
+Questions about the schema? [Open an issue](https://github.com/omelete/relief/issues/new)

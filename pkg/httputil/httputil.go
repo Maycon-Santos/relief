@@ -1,4 +1,4 @@
-// Package httputil fornece utilitários para operações HTTP.
+// Package httputil provides utilities for HTTP operations.
 package httputil
 
 import (
@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-// Client é um wrapper em torno do http.Client com configurações padrão
+// Client is a wrapper around http.Client with default configurations
 type Client struct {
 	client *http.Client
 }
 
-// NewClient cria um novo HTTP client com timeout
+// NewClient creates a new HTTP client with timeout
 func NewClient(timeout time.Duration) *Client {
 	return &Client{
 		client: &http.Client{
@@ -23,41 +23,41 @@ func NewClient(timeout time.Duration) *Client {
 	}
 }
 
-// DefaultClient retorna um client com timeout de 10 segundos
+// DefaultClient returns a client with 10 seconds timeout
 func DefaultClient() *Client {
 	return NewClient(10 * time.Second)
 }
 
-// Get realiza uma requisição GET
+// Get performs a GET request
 func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao criar requisição: %w", err)
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao fazer requisição: %w", err)
+		return nil, fmt.Errorf("error making request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status HTTP inesperado: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected HTTP status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao ler resposta: %w", err)
+		return nil, fmt.Errorf("error reading response: %w", err)
 	}
 
 	return body, nil
 }
 
-// GetWithHeaders realiza uma requisição GET com headers customizados
+// GetWithHeaders performs a GET request with custom headers
 func (c *Client) GetWithHeaders(ctx context.Context, url string, headers map[string]string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao criar requisição: %w", err)
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	for key, value := range headers {
@@ -66,28 +66,28 @@ func (c *Client) GetWithHeaders(ctx context.Context, url string, headers map[str
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao fazer requisição: %w", err)
+		return nil, fmt.Errorf("error making request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status HTTP inesperado: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected HTTP status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao ler resposta: %w", err)
+		return nil, fmt.Errorf("error reading response: %w", err)
 	}
 
 	return body, nil
 }
 
-// DownloadFile baixa um arquivo da URL e retorna os bytes
+// DownloadFile downloads a file from the URL and returns the bytes
 func (c *Client) DownloadFile(ctx context.Context, url string) ([]byte, error) {
 	return c.Get(ctx, url)
 }
 
-// IsReachable verifica se uma URL está acessível
+// IsReachable checks if a URL is accessible
 func (c *Client) IsReachable(ctx context.Context, url string) bool {
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {

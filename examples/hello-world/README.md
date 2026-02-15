@@ -1,106 +1,105 @@
-# Hello World - Exemplo do SofredorOrchestrator
+# Hello World - Relief Orchestrator Example
 
-Este é um projeto de exemplo simples para testar o **SofredorOrchestrator**.
+This is a simple example project to test **Relief Orchestrator**.
 
-## 📋 O que faz?
+## 📋 What it does
 
-Um servidor HTTP básico em Node.js que:
-- Escuta na porta configurada (padrão: 3000)
-- Retorna um JSON com informações sobre a requisição
-- Demonstra como usar `sofredor.yaml` para configurar um projeto
+A basic Node.js HTTP server that:
+- Listens on the configured port (default: 3000)
+- Returns JSON with request information
+- Demonstrates how to use `relief.yaml` to configure a project
 
-## 🚀 Como usar com o Orchestrator
+## 🚀 How to use with the Orchestrator
 
-### 1. Adicionar o projeto
+### 1. Add the project
 
-No SofredorOrchestrator, clique em "Add Local Project" e selecione esta pasta.
+In Relief Orchestrator, click "Add Local Project" and select this folder.
 
-Ou adicione manualmente ao arquivo de configuração:
+Or add manually to the configuration file:
 
 ```yaml
 projects:
   - name: "hello-world"
     path: "./examples/hello-world"
-    domain: "hello.sofredor.local"
+    domain: "hello.local.dev"
     type: "node"
 ```
 
-### 2. Iniciar o projeto
+### 2. Start the project
 
-No painel do Orchestrator:
-1. Encontre o projeto "hello-world"
-2. Clique no botão "Start"
-3. Aguarde o status mudar para "Running"
+In the Orchestrator panel:
+1. Find the "hello-world" project
+2. Click the "Start" button
+3. Wait for status to change to "Running"
 
-### 3. Testar
+### 3. Test
 
-Acesse no navegador:
+Access in browser:
 ```
-http://hello.sofredor.local
+http://hello.local.dev
 ```
 
-Ou via curl:
+Or via curl:
 ```bash
-curl http://hello.sofredor.local
+curl http://hello.local.dev
 ```
 
-Você deve ver uma resposta JSON como:
+You should see a JSON response like:
 ```json
 {
-  "message": "Hello from SofredorOrchestrator!",
+  "message": "Hello from Relief Orchestrator!",
   "project": "hello-world",
-  "timestamp": "2026-02-14T10:30:00.000Z",
-  "environment": "development",
-  "path": "/",
-  "method": "GET"
+  "timestamp": "2026-02-15T10:30:00.000Z",
+  "port": 3000,
+  "env": "development"
 }
 ```
 
-## 🔍 Estrutura
+## 🔍 Structure
 
-- `sofredor.yaml` - Manifesto do projeto (configuração)
-- `index.js` - Servidor HTTP simples
-- `package.json` - Metadados do projeto Node.js
+- `relief.yaml` - Project manifest (configuration)
+- `index.js` - Simple HTTP server
+- `package.json` - Node.js project metadata
 
-## ⚙️ Requisitos
+## ⚙️ Requirements
 
-- Node.js >= 18.0.0 (verificado automaticamente pelo Orchestrator)
+- Node.js >= 18.0.0 (automatically checked by Orchestrator)
 
-## 📝 Modificando
+## 📝 Modifying
 
-Experimente modificar:
+Try modifying:
 
-1. **Porta:** Altere `PORT` no `sofredor.yaml`
-2. **Domínio:** Mude `domain` para `teste.sofredor.local`
-3. **Resposta:** Edite o objeto `response` em `index.js`
+1. **Port:** Change `PORT` in `relief.yaml`
+2. **Domain:** Change `domain` to `test.local.dev`
+3. **Response:** Edit the `response` object in `index.js`
 
-Após modificar, reinicie o projeto no Orchestrator.
+After modifying, restart the project in the Orchestrator.
 
-## ❓ Problemas comuns
+## ❓ Common issues
 
-### Porta já em uso
-Se a porta 3000 estiver ocupada, altere no `sofredor.yaml`:
+### Port already in use
+If port 3000 is occupied, change in `relief.yaml`:
 ```yaml
 env:
   PORT: "3001"
 ```
 
-### Domínio não resolve
-Verifique se o Orchestrator adicionou a entrada em `/etc/hosts`:
+### Domain doesn't resolve
+Check if Orchestrator added the entry to `/etc/hosts`:
 ```bash
-cat /etc/hosts | grep sofredor
+cat /etc/hosts | grep relief
 ```
 
-Deve ter:
+Should have:
 ```
-127.0.0.1 hello.sofredor.local # SOFREDOR
+127.0.0.1 hello.local.dev # RELIEF
 ```
 
-## 🎓 Próximos passos
+## 🎓 Next steps
 
-Agora que você testou o exemplo básico:
+Now that you've tested the basic example:
 
-1. Crie seu próprio `sofredor.yaml` em outros projetos
-2. Explore dependências gerenciadas
-3. Configure múltiplos serviços
-4. Use Docker para projetos mais complexos
+1. Create your own `relief.yaml` in other projects
+2. Explore managed dependencies
+3. Configure multiple services
+4. Use Docker for more complex projects

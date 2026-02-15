@@ -1,8 +1,8 @@
 # ⚡ SofredorOrchestrator
 
-> **Ferramenta de orquestração de desenvolvimento local híbrida**
+> **Hybrid local development orchestration tool**
 
-Gerencie múltiplos projetos simultaneamente com suporte a Node.js, Python, Docker e mais. Interface gráfica moderna, configuração em camadas e zero secrets hardcoded.
+Manage multiple projects simultaneously with support for Node.js, Python, Docker and more. Modern GUI, layered configuration, and zero hardcoded secrets.
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![Wails](https://img.shields.io/badge/Wails-v2-DF5B00?style=flat)](https://wails.io)
@@ -14,49 +14,49 @@ Gerencie múltiplos projetos simultaneamente com suporte a Node.js, Python, Dock
 ## 🎯 Features
 
 - ✅ **Multi-Runtime:** Node.js, Python, Go, Ruby, Java, Docker
-- ✅ **Interface Gráfica:** GUI moderna com Wails + React
-- ✅ **Proxy Reverso:** Traefik integrado para roteamento de domínios
-- ✅ **Config em Camadas:** Remote (empresa) + Local (dev) com deep merge
-- ✅ **Dependency Manager:** Verificação automática de versões
-- ✅ **Zero Secrets:** Nenhuma credencial hardcoded
+- ✅ **Graphical Interface:** Modern GUI with Wails + React
+- ✅ **Reverse Proxy:** Integrated Traefik for domain routing
+- ✅ **Layered Config:** Remote (company) + Local (dev) with deep merge
+- ✅ **Dependency Manager:** Automatic version verification
+- ✅ **Zero Secrets:** No hardcoded credentials
 - ✅ **Cross-Platform:** Linux, macOS, Windows
-- ✅ **Logs em Tempo Real:** Visualizador de logs integrado
-- ✅ **Open Source:** MIT License, contribuições bem-vindas
+- ✅ **Real-time Logs:** Integrated log viewer
+- ✅ **Open Source:** MIT License, contributions welcome
 
 ---
 
 ## 🚀 Quick Start
 
-### Pré-requisitos
+### Prerequisites
 
 - Go 1.22+
 - Node.js 18+
 - Wails CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 
-### Instalação
+### Installation
 
 ```bash
-# Clone o repositório
+# Clone the repository
 git clone https://github.com/omelete/sofredor-orchestrator.git
 cd sofredor-orchestrator
 
-# Instale dependências
+# Install dependencies
 go mod download
 cd frontend && npm install && cd ..
 
-# Execute em modo dev
+# Run in dev mode
 wails dev
 ```
 
-### Testando com o Exemplo Hello World
+### Testing with Hello World Example
 
-1. Inicie o Sofredor Orchestrator
-2. Clique em "Add Local Project"
-3. Selecione a pasta `examples/hello-world`
-4. Clique em "Start" no projeto
-5. Acesse: `http://hello.sofredor.local`
+1. Start Sofredor Orchestrator
+2. Click "Add Local Project"
+3. Select the `examples/hello-world` folder
+4. Click "Start" on the project
+5. Access: `http://hello.sofredor.local`
 
-Você verá:
+You will see:
 ```json
 {
   "message": "Hello from SofredorOrchestrator!",
@@ -67,9 +67,9 @@ Você verá:
 
 ---
 
-## 📋 Uso
+## 📋 Usage
 
-### 1. Criar um `sofredor.yaml` no seu projeto
+### 1. Create a `sofredor.yaml` in your project
 
 ```yaml
 name: "my-api"
@@ -89,15 +89,15 @@ env:
   NODE_ENV: "development"
 ```
 
-### 2. Adicionar ao Orchestrator
+### 2. Add to Orchestrator
 
-Na interface:
-1. Clique em "Add Local Project"
-2. Selecione a pasta do projeto
-3. Visualize o status das dependências
-4. Clique em "Start"
+In the interface:
+1. Click "Add Local Project"
+2. Select the project folder
+3. View dependency status
+4. Click "Start"
 
-### 3. Acessar o serviço
+### 3. Access the service
 
 ```bash
 curl http://api.sofredor.local
@@ -105,9 +105,9 @@ curl http://api.sofredor.local
 
 ---
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
-### Visão Geral
+### Overview
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -122,48 +122,48 @@ curl http://api.sofredor.local
 └─────────────────────────────────────────────────┘
 ```
 
-### Componentes Principais
+### Main Components
 
-- **Config Loader:** Merge de config remota + local (YAML)
+- **Config Loader:** Remote + local config merge (YAML)
 - **Runner Factory:** Strategy Pattern (Native, Docker)
-- **Dependency Manager:** Checkers para Node, Python, PostgreSQL
-- **Proxy Manager:** Traefik + manipulação de `/etc/hosts`
-- **Storage:** SQLite para estado e logs
+- **Dependency Manager:** Checkers for Node, Python, PostgreSQL
+- **Proxy Manager:** Traefik + `/etc/hosts` manipulation
+- **Storage:** SQLite for state and logs
 
-📖 [Documentação completa de arquitetura](docs/architecture.md)
+📖 [Complete architecture documentation](docs/architecture.md)
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 /sofredor-orchestrator
-├── cmd/app/              # Entrypoint principal (Wails)
-├── internal/             # Código privado
+├── cmd/app/              # Main entrypoint (Wails)
+├── internal/             # Private code
 │   ├── app/              # Wails bindings
-│   ├── config/           # Gerenciamento de configuração
-│   ├── domain/           # Entidades de negócio
+│   ├── config/           # Configuration management
+│   ├── domain/           # Business entities
 │   ├── runner/           # Strategy Pattern (Native, Docker)
-│   ├── dependency/       # Checkers de dependências
+│   ├── dependency/       # Dependency checkers
 │   ├── proxy/            # Traefik + Hosts manager
 │   └── storage/          # SQLite + Repositories
-├── pkg/                  # Código reutilizável (Logger, Utils)
+├── pkg/                  # Reusable code (Logger, Utils)
 ├── frontend/             # React + TypeScript
 │   └── src/
 │       ├── components/   # ProjectCard, StatusBadge, LogsViewer
 │       ├── hooks/        # useProjects
 │       └── services/     # Wails API wrapper
-├── examples/             # Projetos de exemplo
-│   └── hello-world/      # Exemplo Node.js pronto para uso
-├── configs/              # Configurações de exemplo
-└── docs/                 # Documentação
+├── examples/             # Example projects
+│   └── hello-world/      # Ready-to-use Node.js example
+├── configs/              # Example configurations
+└── docs/                 # Documentation
 ```
 
 ---
 
-## 🔧 Configuração
+## 🔧 Configuration
 
-### Arquivo Principal: `~/.sofredor/config.yaml`
+### Main File: `~/.sofredor/config.yaml`
 
 ```yaml
 projects:
@@ -185,28 +185,28 @@ proxy:
   dashboard: true
 ```
 
-### Configuração Local (Override): `~/.sofredor/config.local.yaml`
+### Local Configuration (Override): `~/.sofredor/config.local.yaml`
 
 ```yaml
-# Sobrescreve configuração remota
+# Overrides remote configuration
 projects:
   - name: "my-api"
-    path: "/custom/path"    # Override do path
+    path: "/custom/path"    # Path override
     env:
-      PORT: "4000"           # Override da porta
+      PORT: "4000"           # Port override
 ```
 
-🔗 [Schema completo do sofredor.yaml](docs/manifest-schema.md)
+🔗 [Complete sofredor.yaml schema](docs/manifest-schema.md)
 
 ---
 
 ## 🌐 Networking
 
-### Traefik (Proxy Reverso)
+### Traefik (Reverse Proxy)
 
-O Orchestrator configura automaticamente o Traefik para rotear domínios `*.sofredor.local` para as portas dos projetos.
+The Orchestrator automatically configures Traefik to route `*.sofredor.local` domains to project ports.
 
-**Exemplo de roteamento:**
+**Routing example:**
 ```
 hello.sofredor.local  →  localhost:3000
 api.sofredor.local    →  localhost:4000
@@ -215,88 +215,88 @@ app.sofredor.local    →  localhost:5173
 
 ### /etc/hosts
 
-O Orchestrator adiciona entradas automaticamente:
+The Orchestrator adds entries automatically:
 ```
 127.0.0.1 hello.sofredor.local # SOFREDOR
 127.0.0.1 api.sofredor.local   # SOFREDOR
 ```
 
-⚠️ **Nota:** Requer privilégios elevados no Linux/Mac. O app solicitará permissão.
+⚠️ **Note:** Requires elevated privileges on Linux/Mac. The app will request permission.
 
 ---
 
-## 🛠️ Desenvolvimento
+## 🛠️ Development
 
-### Executar Testes
+### Run Tests
 
 ```bash
 ./build/ci/test.sh
 ```
 
-### Executar Linter
+### Run Linter
 
 ```bash
 golangci-lint run
 ```
 
-### Build para Produção
+### Build for Production
 
 ```bash
 ./build/ci/build.sh
 ```
 
-Gera binários em `build/bin/` para:
+Generates binaries in `build/bin/` for:
 - macOS (Intel e ARM)
 - Linux (AMD64)
 - Windows (AMD64)
 
 ---
 
-## 🤝 Contribuindo
+## 🤝 Contributing
 
-Contribuições são muito bem-vindas! Por favor, leia o [Guia de Contribuição](docs/contributing.md).
+Contributions are very welcome! Please read the [Contributing Guide](docs/contributing.md).
 
-### Áreas que precisam de ajuda:
+### Areas that need help:
 
-- 🐳 **DockerRunner:** Implementação completa
-- 📦 **Instaladores:** Node.js, Python portáteis
-- 🎨 **UI/UX:** Melhorias no design
-- 📚 **Docs:** Tutoriais, exemplos, traduções
-- 🧪 **Testes:** Aumentar cobertura
+- 🐳 **DockerRunner:** Complete implementation
+- 📦 **Installers:** Portable Node.js, Python
+- 🎨 **UI/UX:** Design improvements
+- 📚 **Docs:** Tutorials, examples, translations
+- 🧪 **Tests:** Increase coverage
 
 ---
 
-## 📖 Documentação
+## 📚 Documentation
 
-- [Arquitetura](docs/architecture.md) - Decisões de design e fluxos
-- [Guia de Contribuição](docs/contributing.md) - Como contribuir
-- [Schema do Manifest](docs/manifest-schema.md) - Referência do `sofredor.yaml`
-- [Exemplo Hello World](examples/hello-world/README.md) - Tutorial prático
+- [Architecture](docs/architecture.md) - Design decisions and flows
+- [Contributing Guide](docs/contributing.md) - How to contribute
+- [Manifest Schema](docs/manifest-schema.md) - `sofredor.yaml` reference
+- [Hello World Example](examples/hello-world/README.md) - Practical tutorial
 
 ---
 
 ## 🐛 Issues & Bugs
 
-Encontrou um bug? [Abra uma issue](https://github.com/omelete/sofredor-orchestrator/issues/new)
+Found a bug? [Open an issue](https://github.com/omelete/sofredor-orchestrator/issues/new)
 
 ---
 
-## 📜 Licença
+## 📜 License
 
-Este projeto é licenciado sob a [MIT License](LICENSE).
-
----
-
-## 🙏 Agradecimentos
-
-- [Wails](https://wails.io) - Framework Go + Web GUI
-- [Traefik](https://traefik.io) - Proxy reverso moderno
-- [React](https://reactjs.org) - Biblioteca UI
-- Todos os [contribuidores](https://github.com/omelete/sofredor-orchestrator/graphs/contributors)
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 📞 Contato
+## 🙏 Acknowledgments
+
+- [Wails](https://wails.io) - Go + Web GUI framework
+- [Traefik](https://traefik.io) - Modern reverse proxy
+- [React](https://reactjs.org) - UI library
+- All [contributors](https://github.com/omelete/sofredor-orchestrator/graphs/contributors)
+
+---
+
+## 📞 Contact
 
 - **Email:** dev@omelete.com
 - **Issues:** [GitHub Issues](https://github.com/omelete/sofredor-orchestrator/issues)
@@ -304,9 +304,9 @@ Este projeto é licenciado sob a [MIT License](LICENSE).
 ---
 
 <p align="center">
-  Feito com ❤️ pela equipe Omelete
+  Made with ❤️ by the Omelete team
 </p>
 
 <p align="center">
-  <sub>⭐ Se você gostou, dê uma estrela no repositório!</sub>
+  <sub>⭐ If you liked it, star the repository!</sub>
 </p>

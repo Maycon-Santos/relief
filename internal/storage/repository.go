@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/omelete/sofredor-orchestrator/internal/domain"
+	"github.com/omelete/relief/internal/domain"
 )
 
 // ProjectRepository gerencia persistência de projetos
