@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -27,13 +26,13 @@ type NativeRunner struct {
 
 // ProcessInfo armazena informações sobre um processo em execução
 type ProcessInfo struct {
-	Project *domain.Project
-	Cmd     *exec.Cmd
-	PID     int
+	Project   *domain.Project
+	Cmd       *exec.Cmd
+	PID       int
 	StartedAt time.Time
-	Stdout  io.ReadCloser
-	Stderr  io.ReadCloser
-	Cancel  context.CancelFunc
+	Stdout    io.ReadCloser
+	Stderr    io.ReadCloser
+	Cancel    context.CancelFunc
 }
 
 // NewNativeRunner cria uma nova instância de NativeRunner
@@ -55,11 +54,21 @@ func (r *NativeRunner) Start(ctx context.Context, project *domain.Project) error
 		return fmt.Errorf("projeto %s já está em execução", project.Name)
 	}
 
+	// Verificar se o manifest está presente
+	if project.Manifest == nil {
+		return fmt.Errorf("manifest não carregado para o projeto %s", project.Name)
+	}
+
 	// Obter script de dev
 	devScript := project.Manifest.GetDevScript()
 	if devScript == "" {
 		return fmt.Errorf("script 'dev' não encontrado no manifest")
 	}
+
+	r.logger.Info("Starting project with script", map[string]interface{}{
+		"project": project.Name,
+		"script":  devScript,
+	})
 
 	// Criar contexto cancelável para o processo
 	processCtx, cancel := context.WithCancel(ctx)

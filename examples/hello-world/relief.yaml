@@ -1,5 +1,5 @@
 name: "hello-world"
-domain: "hello.local.dev"
+domain: "hello.localhost"
 type: "node"
 
 dependencies:

@@ -1,89 +1,64 @@
 // Wrapper para os bindings Wails
-// Este arquivo será atualizado pelo Wails após a primeira build
 
-import type { Project, LogEntry, AppStatus } from "../types/project";
+import * as App from "../../wailsjs/go/app/App";
+import type { AppStatus, LogEntry, Project } from "../types/project";
 
-// @ts-ignore - Wails injeta estas funções globalmente
-const {
-  GetProjects,
-  GetProject,
-  StartProject,
-  StopProject,
-  RestartProject,
-  GetProjectLogs,
-  AddLocalProject,
-  RemoveProject,
-  RefreshConfig,
-  GetStatus,
-} = window.go?.main?.App || {};
+export interface PortConflict {
+  port: number;
+  pid: number;
+  command: string;
+}
 
 export const api = {
   async getProjects(): Promise<Project[]> {
-    if (!GetProjects) return [];
-    return await GetProjects();
+    return await App.GetProjects();
   },
 
   async getProject(id: string): Promise<Project> {
-    if (!GetProject) throw new Error("API not available");
-    return await GetProject(id);
+    return await App.GetProject(id);
   },
 
   async startProject(id: string): Promise<void> {
-    if (!StartProject) throw new Error("API not available");
-    return await StartProject(id);
+    return await App.StartProject(id);
   },
 
   async stopProject(id: string): Promise<void> {
-    if (!StopProject) throw new Error("API not available");
-    return await StopProject(id);
+    return await App.StopProject(id);
   },
 
   async restartProject(id: string): Promise<void> {
-    if (!RestartProject) throw new Error("API not available");
-    return await RestartProject(id);
+    return await App.RestartProject(id);
   },
 
   async getProjectLogs(id: string, tail: number = 100): Promise<LogEntry[]> {
-    if (!GetProjectLogs) return [];
-    return await GetProjectLogs(id, tail);
+    return await App.GetProjectLogs(id, tail);
   },
 
   async addLocalProject(path: string): Promise<void> {
-    if (!AddLocalProject) throw new Error("API not available");
-    return await AddLocalProject(path);
+    return await App.AddLocalProject(path);
   },
 
   async removeProject(id: string): Promise<void> {
-    if (!RemoveProject) throw new Error("API not available");
-    return await RemoveProject(id);
+    return await App.RemoveProject(id);
   },
 
   async refreshConfig(): Promise<void> {
-    if (!RefreshConfig) throw new Error("API not available");
-    return await RefreshConfig();
+    return await App.RefreshConfig();
   },
 
   async getStatus(): Promise<AppStatus> {
-    if (!GetStatus) {
-      return {
-        total_projects: 0,
-        running: 0,
-        stopped: 0,
-        errors: 0,
-        traefik_running: false,
-      };
-    }
-    return await GetStatus();
+    return (await App.GetStatus()) as AppStatus;
+  },
+
+  async selectProjectDirectory(): Promise<string> {
+    return await App.SelectProjectDirectory();
+  },
+
+  async checkPortInUse(port: number): Promise<PortConflict | null> {
+    return (await App.CheckPortInUse(port)) as PortConflict | null;
+  },
+
+  async killProcessByPID(pid: number): Promise<void> {
+    return await App.KillProcessByPID(pid);
   },
 };
-
-// Declaração global para TypeScript
-declare global {
-  interface Window {
-    go?: {
-      main?: {
-        App?: any;
-      };
-    };
-  }
-}

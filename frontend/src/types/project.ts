@@ -1,22 +1,11 @@
-// Tipos TypeScript para o frontend
+// Re-export tipos gerados pelo Wails
+import type { domain } from "../../wailsjs/go/models";
 
-export interface Project {
-  id: string;
-  name: string;
-  path: string;
-  domain: string;
-  type: ProjectType;
-  status: ProjectStatus;
-  port: number;
-  pid?: number;
-  dependencies: Dependency[];
-  scripts: Record<string, string>;
-  env: Record<string, string>;
-  created_at: string;
-  updated_at: string;
-  last_error?: string;
-}
+export type Project = domain.Project;
+export type LogEntry = domain.LogEntry;
+export type Dependency = domain.Dependency;
 
+// Tipos auxiliares
 export type ProjectType = "docker" | "node" | "python" | "java" | "go" | "ruby";
 
 export type ProjectStatus =
@@ -25,23 +14,6 @@ export type ProjectStatus =
   | "running"
   | "error"
   | "unknown";
-
-export interface Dependency {
-  name: string;
-  version: string;
-  required_version: string;
-  managed: boolean;
-  satisfied: boolean;
-  message?: string;
-}
-
-export interface LogEntry {
-  id: number;
-  project_id: string;
-  level: string;
-  message: string;
-  timestamp: string;
-}
 
 export interface AppStatus {
   total_projects: number;

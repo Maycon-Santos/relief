@@ -18,7 +18,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`🚀 Hello World server running on http://localhost:${PORT}`);
-  console.log(`📝 Try accessing: http://hello.local.dev`);
+  console.log(`📝 Try accessing: http://hello.local.test`);
 });
 
 // Graceful shutdown

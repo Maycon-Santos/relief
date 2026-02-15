@@ -33,7 +33,7 @@ type RunnerStatus struct {
 	PID        int
 	Port       int
 	Uptime     time.Duration
-	MemoryUsed int64  // em bytes
+	MemoryUsed int64   // em bytes
 	CPUUsed    float64 // percentual
 	Message    string
 }
@@ -68,7 +68,7 @@ func (b *BaseRunner) AddLog(projectID, level, message string) {
 		ProjectID: projectID,
 		Level:     level,
 		Message:   message,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().Format(time.RFC3339),
 	}
 
 	b.LogBuffer = append(b.LogBuffer, entry)

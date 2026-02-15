@@ -74,6 +74,20 @@ export function useProjects() {
     }
   };
 
+  const addProject = async () => {
+    try {
+      const path = await api.selectProjectDirectory();
+      if (path) {
+        await api.addLocalProject(path);
+        await loadProjects();
+      }
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : "Error adding project",
+      );
+    }
+  };
+
   return {
     projects,
     loading,
@@ -82,6 +96,7 @@ export function useProjects() {
     stopProject,
     restartProject,
     removeProject,
+    addProject,
     refresh: loadProjects,
   };
 }

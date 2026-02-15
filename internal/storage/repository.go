@@ -4,6 +4,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/omelete/relief/internal/domain"
@@ -70,7 +71,7 @@ func (r *ProjectRepository) Update(project *domain.Project) error {
 		project.Port,
 		project.PID,
 		project.LastError,
-		time.Now(),
+		time.Now().Format(time.RFC3339),
 		project.ID,
 	)
 
@@ -94,7 +95,7 @@ func (r *ProjectRepository) Update(project *domain.Project) error {
 // Delete remove um projeto
 func (r *ProjectRepository) Delete(id string) error {
 	query := `DELETE FROM projects WHERE id = ?`
-	
+
 	result, err := r.db.conn.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("erro ao deletar projeto: %w", err)
@@ -137,9 +138,35 @@ func (r *ProjectRepository) GetByID(id string) (*domain.Project, error) {
 		return nil, fmt.Errorf("erro ao buscar projeto: %w", err)
 	}
 
+	// Inicializar maps se necessário
+	if project.Scripts == nil {
+		project.Scripts = make(map[string]string)
+	}
+	if project.Env == nil {
+		project.Env = make(map[string]string)
+	}
+	if project.Dependencies == nil {
+		project.Dependencies = []domain.Dependency{}
+	}
+
 	// Carregar dependências
 	if err := r.loadDependencies(&project); err != nil {
 		return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
+	}
+
+	// Carregar manifest do arquivo relief.yaml
+	if manifest, err := domain.ParseManifest(project.Path); err == nil {
+		project.Manifest = manifest
+		// Atualizar porta se estiver configurada no manifest
+		if portStr, ok := manifest.Env["PORT"]; ok {
+			if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
+				project.Port = port
+			}
+		} else if manifest.Ports != nil {
+			if mainPort, ok := manifest.Ports["main"]; ok && project.Port == 0 {
+				project.Port = mainPort
+			}
+		}
 	}
 
 	return &project, nil
@@ -174,9 +201,35 @@ func (r *ProjectRepository) GetByName(name string) (*domain.Project, error) {
 		return nil, fmt.Errorf("erro ao buscar projeto: %w", err)
 	}
 
+	// Inicializar maps se necessário
+	if project.Scripts == nil {
+		project.Scripts = make(map[string]string)
+	}
+	if project.Env == nil {
+		project.Env = make(map[string]string)
+	}
+	if project.Dependencies == nil {
+		project.Dependencies = []domain.Dependency{}
+	}
+
 	// Carregar dependências
 	if err := r.loadDependencies(&project); err != nil {
 		return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
+	}
+
+	// Carregar manifest do arquivo relief.yaml
+	if manifest, err := domain.ParseManifest(project.Path); err == nil {
+		project.Manifest = manifest
+		// Atualizar porta se estiver configurada no manifest
+		if portStr, ok := manifest.Env["PORT"]; ok {
+			if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
+				project.Port = port
+			}
+		} else if manifest.Ports != nil {
+			if mainPort, ok := manifest.Ports["main"]; ok && project.Port == 0 {
+				project.Port = mainPort
+			}
+		}
 	}
 
 	return &project, nil
@@ -216,9 +269,35 @@ func (r *ProjectRepository) List() ([]*domain.Project, error) {
 			return nil, fmt.Errorf("erro ao scanear projeto: %w", err)
 		}
 
+		// Inicializar maps se necessário
+		if project.Scripts == nil {
+			project.Scripts = make(map[string]string)
+		}
+		if project.Env == nil {
+			project.Env = make(map[string]string)
+		}
+		if project.Dependencies == nil {
+			project.Dependencies = []domain.Dependency{}
+		}
+
 		// Carregar dependências
 		if err := r.loadDependencies(&project); err != nil {
 			return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
+		}
+
+		// Carregar manifest do arquivo relief.yaml
+		if manifest, err := domain.ParseManifest(project.Path); err == nil {
+			project.Manifest = manifest
+			// Atualizar porta se estiver configurada no manifest
+			if portStr, ok := manifest.Env["PORT"]; ok {
+				if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
+					project.Port = port
+				}
+			} else if manifest.Ports != nil {
+				if mainPort, ok := manifest.Ports["main"]; ok && project.Port == 0 {
+					project.Port = mainPort
+				}
+			}
 		}
 
 		projects = append(projects, &project)
@@ -305,7 +384,7 @@ func NewLogRepository(db *DB) *LogRepository {
 // Create cria uma nova entrada de log
 func (r *LogRepository) Create(log *domain.LogEntry) error {
 	query := `INSERT INTO logs (project_id, level, message, timestamp) VALUES (?, ?, ?, ?)`
-	
+
 	result, err := r.db.conn.Exec(query, log.ProjectID, log.Level, log.Message, log.Timestamp)
 	if err != nil {
 		return fmt.Errorf("erro ao criar log: %w", err)

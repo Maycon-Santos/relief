@@ -3,14 +3,18 @@ package storage
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
-	"os"
 	"path/filepath"
+	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/omelete/relief/pkg/fileutil"
 	"github.com/omelete/relief/pkg/logger"
 )
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
 
 // DB é o wrapper para o banco de dados SQLite
 type DB struct {
@@ -75,67 +79,37 @@ func (db *DB) GetConn() *sql.DB {
 
 // migrate executa as migrations do banco de dados
 func (db *DB) migrate() error {
-	// Ler arquivo de migration
-	migrationPath := "internal/storage/migrations/001_initial.sql"
-	
-	// Como estamos em um executável compilado, vamos embutir o SQL diretamente
-	migrationSQL := `
-		CREATE TABLE IF NOT EXISTS projects (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			path TEXT NOT NULL,
-			domain TEXT,
-			type TEXT NOT NULL,
-			status TEXT NOT NULL,
-			port INTEGER,
-			pid INTEGER,
-			last_error TEXT,
-			created_at DATETIME NOT NULL,
-			updated_at DATETIME NOT NULL
-		);
+	// Ler todos os arquivos de migration do diretório embedado
+	entries, err := migrationsFS.ReadDir("migrations")
+	if err != nil {
+		return fmt.Errorf("erro ao ler diretório de migrations: %w", err)
+	}
 
-		CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
-		CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
-		CREATE INDEX IF NOT EXISTS idx_projects_domain ON projects(domain);
+	// Ordenar migrations por nome (001, 002, etc.)
+	var migrationFiles []string
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".sql" {
+			migrationFiles = append(migrationFiles, entry.Name())
+		}
+	}
+	sort.Strings(migrationFiles)
 
-		CREATE TABLE IF NOT EXISTS logs (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			project_id TEXT NOT NULL,
-			level TEXT NOT NULL,
-			message TEXT NOT NULL,
-			timestamp DATETIME NOT NULL,
-			FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-		);
+	// Executar cada migration em ordem
+	for _, filename := range migrationFiles {
+		db.logger.Info("Executando migration", map[string]interface{}{
+			"file": filename,
+		})
 
-		CREATE INDEX IF NOT EXISTS idx_logs_project_id ON logs(project_id);
-		CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp);
-		CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
+		// Ler conteúdo do arquivo
+		content, err := migrationsFS.ReadFile(filepath.Join("migrations", filename))
+		if err != nil {
+			return fmt.Errorf("erro ao ler migration %s: %w", filename, err)
+		}
 
-		CREATE TABLE IF NOT EXISTS dependencies (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			project_id TEXT NOT NULL,
-			name TEXT NOT NULL,
-			version TEXT,
-			required_version TEXT NOT NULL,
-			managed BOOLEAN NOT NULL DEFAULT 0,
-			satisfied BOOLEAN NOT NULL DEFAULT 0,
-			message TEXT,
-			FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_dependencies_project_id ON dependencies(project_id);
-		CREATE INDEX IF NOT EXISTS idx_dependencies_name ON dependencies(name);
-
-		CREATE TABLE IF NOT EXISTS settings (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL,
-			updated_at DATETIME NOT NULL
-		);
-	`
-
-	// Executar migration
-	if _, err := db.conn.Exec(migrationSQL); err != nil {
-		return fmt.Errorf("erro ao executar migration: %w", err)
+		// Executar SQL
+		if _, err := db.conn.Exec(string(content)); err != nil {
+			return fmt.Errorf("erro ao executar migration %s: %w", filename, err)
+		}
 	}
 
 	db.logger.Info("Migrations executadas com sucesso", nil)
@@ -150,7 +124,7 @@ func (db *DB) BeginTx() (*sql.Tx, error) {
 // ClearAllData limpa todos os dados do banco (útil para testes)
 func (db *DB) ClearAllData() error {
 	tables := []string{"dependencies", "logs", "projects", "settings"}
-	
+
 	for _, table := range tables {
 		if _, err := db.conn.Exec(fmt.Sprintf("DELETE FROM %s", table)); err != nil {
 			return fmt.Errorf("erro ao limpar tabela %s: %w", table, err)

@@ -1,7 +1,5 @@
-import type { ProjectStatus } from '../types/project';
-
 interface StatusBadgeProps {
-  status: ProjectStatus;
+  status: string;
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {

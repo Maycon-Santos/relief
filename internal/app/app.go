@@ -12,22 +12,23 @@ import (
 	"github.com/omelete/relief/internal/runner"
 	"github.com/omelete/relief/internal/storage"
 	"github.com/omelete/relief/pkg/logger"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App é a estrutura principal da aplicação
 type App struct {
-	ctx              context.Context
-	logger           *logger.Logger
-	config           *config.Config
-	configLoader     *config.Loader
-	db               *storage.DB
-	projectRepo      *storage.ProjectRepository
-	logRepo          *storage.LogRepository
-	runnerFactory    *runner.Factory
-	runners          map[string]runner.ProjectRunner
-	dependencyMgr    *dependency.Manager
-	traefikMgr       *proxy.TraefikManager
-	hostsMgr         *proxy.HostsManager
+	ctx           context.Context
+	logger        *logger.Logger
+	config        *config.Config
+	configLoader  *config.Loader
+	db            *storage.DB
+	projectRepo   *storage.ProjectRepository
+	logRepo       *storage.LogRepository
+	runnerFactory *runner.Factory
+	runners       map[string]runner.ProjectRunner
+	dependencyMgr *dependency.Manager
+	traefikMgr    *proxy.TraefikManager
+	hostsMgr      *proxy.HostsManager
 }
 
 // NewApp cria uma nova instância da aplicação
@@ -38,7 +39,7 @@ func NewApp() *App {
 }
 
 // Startup é chamado quando a aplicação inicia
-func (a *App) Startup(ctx context.Context) error {
+func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
 	// Inicializar logger
@@ -48,7 +49,7 @@ func (a *App) Startup(ctx context.Context) error {
 	// Inicializar banco de dados
 	db, err := storage.NewDB(a.logger)
 	if err != nil {
-		return fmt.Errorf("erro ao inicializar banco de dados: %w", err)
+		a.logger.Fatal("Failed to initialize database", err, nil)
 	}
 	a.db = db
 	a.projectRepo = storage.NewProjectRepository(db)
@@ -60,20 +61,33 @@ func (a *App) Startup(ctx context.Context) error {
 	// Carregar configuração
 	configPath, _ := config.GetConfigPath()
 	localConfigPath, _ := config.GetLocalConfigPath()
-	
+
 	cfg, err := a.configLoader.LoadConfig("", configPath)
 	if err != nil {
 		a.logger.Warn("Usando configuração padrão", map[string]interface{}{
 			"error": err.Error(),
 		})
-		cfg = &config.Config{}
+		cfg = &config.Config{
+			Proxy: config.ProxyConfig{
+				HTTPPort:  80,
+				HTTPSPort: 443,
+			},
+		}
 	}
-	
+
+	// Garantir valores padrão para proxy se não estiverem definidos
+	if cfg.Proxy.HTTPPort == 0 {
+		cfg.Proxy.HTTPPort = 80
+	}
+	if cfg.Proxy.HTTPSPort == 0 {
+		cfg.Proxy.HTTPSPort = 443
+	}
+
 	// Tentar merge com local
 	if localCfg, err := a.configLoader.LoadConfig("", localConfigPath); err == nil {
 		cfg.MergeWith(localCfg)
 	}
-	
+
 	a.config = cfg
 
 	// Inicializar runner factory
@@ -92,25 +106,47 @@ func (a *App) Startup(ctx context.Context) error {
 		a.logger.Warn("Erro ao inicializar Traefik manager", map[string]interface{}{
 			"error": err.Error(),
 		})
+	} else {
+		// Iniciar Traefik
+		if err := traefikMgr.Start(a.ctx); err != nil {
+			a.logger.Warn("Erro ao iniciar Traefik", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
 	}
 	a.traefikMgr = traefikMgr
 
 	// Inicializar hosts manager
-	a. hostsMgr = proxy.NewHostsManager(a.logger)
+	a.hostsMgr = proxy.NewHostsManager(a.logger)
+
+	// Limpar processos órfãos de execuções anteriores
+	a.cleanupOrphanProcesses()
 
 	a.logger.Info("Relief Orchestrator started successfully", nil)
-	return nil
 }
 
 // Shutdown é chamado quando a aplicação fecha
-func (a *App) Shutdown(ctx context.Context) error {
+func (a *App) Shutdown(ctx context.Context) {
 	a.logger.Info("Shutting down Relief Orchestrator", nil)
 
 	// Parar todos os projetos em execução
 	projects, _ := a.projectRepo.List()
 	for _, project := range projects {
-		if project.IsRunning() {
+		if project.IsRunning() || project.PID > 0 {
+			a.logger.Info("Parando projeto no shutdown", map[string]interface{}{
+				"project": project.Name,
+				"pid":     project.PID,
+			})
 			a.StopProject(project.ID)
+		}
+	}
+
+	// Parar Traefik
+	if a.traefikMgr != nil {
+		if err := a.traefikMgr.Stop(); err != nil {
+			a.logger.Warn("Erro ao parar Traefik", map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 	}
 
@@ -118,8 +154,6 @@ func (a *App) Shutdown(ctx context.Context) error {
 	if a.db != nil {
 		a.db.Close()
 	}
-
-	return nil
 }
 
 // GetProjects retorna todos os projetos
@@ -142,12 +176,42 @@ func (a *App) GetProject(id string) (*domain.Project, error) {
 
 // StartProject inicia um projeto
 func (a *App) StartProject(id string) error {
+	defer func() {
+		if r := recover(); r != nil {
+			panicErr := fmt.Errorf("panic: %v", r)
+			a.logger.Error("Panic in StartProject", panicErr, map[string]interface{}{
+				"id": id,
+			})
+		}
+	}()
+
+	if a.logger == nil || a.projectRepo == nil || a.dependencyMgr == nil || a.runnerFactory == nil {
+		return fmt.Errorf("application not fully initialized")
+	}
+
 	a.logger.Info("Iniciando projeto", map[string]interface{}{"id": id})
 
 	// Buscar projeto
 	project, err := a.projectRepo.GetByID(id)
 	if err != nil {
 		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	if project == nil {
+		return fmt.Errorf("project is nil")
+	}
+
+	// Garantir que o manifest está carregado
+	if project.Manifest == nil {
+		a.logger.Warn("Manifest not loaded, attempting to load", map[string]interface{}{
+			"project": project.Name,
+			"path":    project.Path,
+		})
+		manifest, err := domain.ParseManifest(project.Path)
+		if err != nil {
+			return fmt.Errorf("erro ao carregar manifest: %w", err)
+		}
+		project.Manifest = manifest
 	}
 
 	// Verificar dependências
@@ -166,11 +230,28 @@ func (a *App) StartProject(id string) error {
 		return fmt.Errorf("dependências não satisfeitas: %v", unsatisfied)
 	}
 
+	// Verificar se a porta está em uso
+	if project.Port > 0 {
+		conflict, err := a.CheckPortInUse(project.Port)
+		if err != nil {
+			a.logger.Warn("Erro ao verificar porta", map[string]interface{}{
+				"port":  project.Port,
+				"error": err.Error(),
+			})
+		} else if conflict != nil {
+			return fmt.Errorf("PORT_IN_USE:%d:%d:%s", conflict.Port, conflict.PID, conflict.Command)
+		}
+	}
+
 	// Criar runner apropriado
 	projectRunner, err := a.runnerFactory.CreateRunner(project)
 	if err != nil {
 		return fmt.Errorf("erro ao criar runner: %w", err)
 	}
+
+	a.logger.Info("Runner created successfully", map[string]interface{}{
+		"project": project.Name,
+	})
 
 	// Iniciar projeto
 	if err := projectRunner.Start(a.ctx, project); err != nil {
@@ -178,6 +259,10 @@ func (a *App) StartProject(id string) error {
 		a.projectRepo.Update(project)
 		return fmt.Errorf("erro ao iniciar projeto: %w", err)
 	}
+
+	a.logger.Info("Project started successfully", map[string]interface{}{
+		"project": project.Name,
+	})
 
 	// Armazenar runner
 	a.runners[project.ID] = projectRunner
@@ -213,17 +298,27 @@ func (a *App) StopProject(id string) error {
 
 	// Buscar runner
 	projectRunner, exists := a.runners[id]
-	if !exists {
-		return fmt.Errorf("projeto não está em execução")
+	if exists {
+		// Parar projeto via runner
+		if err := projectRunner.Stop(a.ctx, id); err != nil {
+			a.logger.Warn("Erro ao parar via runner", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+		// Remover runner
+		delete(a.runners, id)
+	} else if project.PID > 0 {
+		// Se não tem runner mas tem PID, matar processo diretamente
+		a.logger.Info("Runner não encontrado, matando processo pelo PID", map[string]interface{}{
+			"pid": project.PID,
+		})
+		if err := a.KillProcessByPID(project.PID); err != nil {
+			a.logger.Warn("Erro ao matar processo", map[string]interface{}{
+				"pid":   project.PID,
+				"error": err.Error(),
+			})
+		}
 	}
-
-	// Parar projeto
-	if err := projectRunner.Stop(a.ctx, id); err != nil {
-		return fmt.Errorf("erro ao parar projeto: %w", err)
-	}
-
-	// Remover runner
-	delete(a.runners, id)
 
 	// Remover do Traefik
 	if a.traefikMgr != nil {
@@ -266,10 +361,15 @@ func (a *App) GetProjectLogs(id string, tail int) ([]domain.LogEntry, error) {
 func (a *App) AddLocalProject(path string) error {
 	a.logger.Info("Adicionando projeto local", map[string]interface{}{"path": path})
 
+	// Verificar se o path foi fornecido
+	if path == "" {
+		return fmt.Errorf("no directory selected")
+	}
+
 	// Parsear manifest
 	manifest, err := domain.ParseManifest(path)
 	if err != nil {
-		return fmt.Errorf("erro ao ler manifest: %w", err)
+		return fmt.Errorf("failed to read relief.yaml in selected directory: %w", err)
 	}
 
 	// Converter para projeto
@@ -278,13 +378,18 @@ func (a *App) AddLocalProject(path string) error {
 	// Verificar se já existe
 	existing, _ := a.projectRepo.GetByName(project.Name)
 	if existing != nil {
-		return fmt.Errorf("projeto '%s' já existe", project.Name)
+		return fmt.Errorf("project '%s' already exists", project.Name)
 	}
 
 	// Salvar no banco
 	if err := a.projectRepo.Create(project); err != nil {
-		return fmt.Errorf("erro ao criar projeto: %w", err)
+		return fmt.Errorf("failed to save project: %w", err)
 	}
+
+	a.logger.Info("Projeto adicionado com sucesso", map[string]interface{}{
+		"name": project.Name,
+		"path": path,
+	})
 
 	return nil
 }
@@ -317,17 +422,17 @@ func (a *App) RefreshConfig() error {
 
 	configPath, _ := config.GetConfigPath()
 	localConfigPath, _ := config.GetLocalConfigPath()
-	
+
 	cfg, err := a.configLoader.LoadConfig("", configPath)
 	if err != nil {
 		return fmt.Errorf("erro ao carregar config: %w", err)
 	}
-	
+
 	// Merge com local
 	if localCfg, err := a.configLoader.LoadConfig("", localConfigPath); err == nil {
 		cfg.MergeWith(localCfg)
 	}
-	
+
 	a.config = cfg
 	return nil
 }
@@ -335,11 +440,11 @@ func (a *App) RefreshConfig() error {
 // GetStatus retorna o status geral da aplicação
 func (a *App) GetStatus() (map[string]interface{}, error) {
 	projects, _ := a.projectRepo.List()
-	
+
 	running := 0
 	stopped := 0
 	errors := 0
-	
+
 	for _, p := range projects {
 		switch p.Status {
 		case domain.StatusRunning:
@@ -352,10 +457,107 @@ func (a *App) GetStatus() (map[string]interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"total_projects": len(projects),
-		"running":        running,
-		"stopped":        stopped,
-		"errors":         errors,
+		"total_projects":  len(projects),
+		"running":         running,
+		"stopped":         stopped,
+		"errors":          errors,
 		"traefik_running": a.traefikMgr != nil && a.traefikMgr.IsRunning(),
 	}, nil
+}
+
+// SelectProjectDirectory abre um diálogo para selecionar um diretório
+func (a *App) SelectProjectDirectory() (string, error) {
+	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select Project Directory",
+	})
+	if err != nil {
+		return "", fmt.Errorf("error opening directory dialog: %w", err)
+	}
+	return path, nil
+}
+
+// cleanupOrphanProcesses mata processos órfãos de execuções anteriores
+func (a *App) cleanupOrphanProcesses() {
+	a.logger.Info("Verificando processos órfãos...", nil)
+
+	projects, err := a.projectRepo.List()
+	if err != nil {
+		a.logger.Warn("Erro ao listar projetos para limpeza", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	for _, project := range projects {
+		cleaned := false
+
+		// Se o projeto tem um PID registrado
+		if project.PID > 0 {
+			a.logger.Info("Encontrado processo órfão com PID registrado", map[string]interface{}{
+				"project": project.Name,
+				"pid":     project.PID,
+				"status":  project.Status,
+			})
+
+			// Tentar matar o processo
+			if err := a.KillProcessByPID(project.PID); err != nil {
+				a.logger.Warn("Erro ao matar processo órfão", map[string]interface{}{
+					"project": project.Name,
+					"pid":     project.PID,
+					"error":   err.Error(),
+				})
+			} else {
+				a.logger.Info("Processo órfão encerrado", map[string]interface{}{
+					"project": project.Name,
+					"pid":     project.PID,
+				})
+				cleaned = true
+			}
+		}
+
+		// Verificar se a porta do projeto está em uso (processo órfão sem PID registrado)
+		if project.Port > 0 {
+			conflict, err := a.CheckPortInUse(project.Port)
+			if err == nil && conflict != nil {
+				a.logger.Info("Encontrado processo órfão usando porta do projeto", map[string]interface{}{
+					"project": project.Name,
+					"port":    project.Port,
+					"pid":     conflict.PID,
+					"command": conflict.Command,
+				})
+
+				// Tentar matar o processo
+				if err := a.KillProcessByPID(conflict.PID); err != nil {
+					a.logger.Warn("Erro ao matar processo órfão pela porta", map[string]interface{}{
+						"project": project.Name,
+						"port":    project.Port,
+						"pid":     conflict.PID,
+						"error":   err.Error(),
+					})
+				} else {
+					a.logger.Info("Processo órfão pela porta encerrado", map[string]interface{}{
+						"project": project.Name,
+						"port":    project.Port,
+						"pid":     conflict.PID,
+					})
+					cleaned = true
+				}
+			}
+		}
+
+		// Se limpou algo, atualizar o projeto
+		if cleaned {
+			// Limpar PID e status do projeto
+			project.PID = 0
+			project.UpdateStatus(domain.StatusStopped)
+			if err := a.projectRepo.Update(project); err != nil {
+				a.logger.Warn("Erro ao atualizar projeto após limpeza", map[string]interface{}{
+					"project": project.Name,
+					"error":   err.Error(),
+				})
+			}
+		}
+	}
+
+	a.logger.Info("Limpeza de processos órfãos concluída", nil)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -30,13 +31,13 @@ type ManifestDependency struct {
 	Managed bool   `yaml:"managed"`
 }
 
-//ParseManifest reads and parses the relief.yaml file
+// ParseManifest reads and parses the relief.yaml file
 func ParseManifest(projectPath string) (*Manifest, error) {
 	manifestPath := filepath.Join(projectPath, "relief.yaml")
 
 	// Check if file exists
 	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("relief.yaml file not found in %s", projectPath)
+		return nil, fmt.Errorf("relief.yaml not found. Please create a relief.yaml file in the project directory")
 	}
 
 	// Read file
@@ -48,12 +49,12 @@ func ParseManifest(projectPath string) (*Manifest, error) {
 	// Parse YAML
 	var manifest Manifest
 	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("error parsing relief.yaml: %w", err)
+		return nil, fmt.Errorf("invalid YAML format in relief.yaml: %w", err)
 	}
 
 	// Basic validation
 	if err := manifest.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid manifest: %w", err)
+		return nil, err
 	}
 
 	return &manifest, nil
@@ -124,10 +125,21 @@ func (m *Manifest) GetDependency(name string) *ManifestDependency {
 func (m *Manifest) ToProject(path string) *Project {
 	projectType := ProjectType(m.Type)
 	project := NewProject(m.Name, path, m.Domain, projectType)
-	
+
 	project.Scripts = m.Scripts
 	project.Env = m.Env
 	project.Manifest = m
+
+	// Extract port from env.PORT or ports.main
+	if portStr, ok := m.Env["PORT"]; ok {
+		if port, err := strconv.Atoi(portStr); err == nil {
+			project.Port = port
+		}
+	} else if m.Ports != nil {
+		if mainPort, ok := m.Ports["main"]; ok {
+			project.Port = mainPort
+		}
+	}
 
 	// Convert dependencies
 	for _, dep := range m.Dependencies {
@@ -162,7 +174,7 @@ func (m *Manifest) SaveManifest(projectPath string) error {
 func CreateDefaultManifest(name, projectType string) *Manifest {
 	manifest := &Manifest{
 		Name:         name,
-		Domain:       name + ".local.dev",
+		Domain:       name + ".local.test",
 		Type:         projectType,
 		Dependencies: []ManifestDependency{},
 		Scripts:      make(map[string]string),

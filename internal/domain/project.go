@@ -21,11 +21,11 @@ const (
 type Status string
 
 const (
-	StatusStopped Status = "stopped"
+	StatusStopped  Status = "stopped"
 	StatusStarting Status = "starting"
-	StatusRunning Status = "running"
-	StatusError   Status = "error"
-	StatusUnknown Status = "unknown"
+	StatusRunning  Status = "running"
+	StatusError    Status = "error"
+	StatusUnknown  Status = "unknown"
 )
 
 // Project represents a project managed by the orchestrator
@@ -42,8 +42,8 @@ type Project struct {
 	Scripts      map[string]string `json:"scripts"`
 	Env          map[string]string `json:"env"`
 	Manifest     *Manifest         `json:"manifest,omitempty"`
-	CreatedAt    time.Time         `json:"created_at"`
-	UpdatedAt    time.Time         `json:"updated_at"`
+	CreatedAt    string            `json:"created_at"` // RFC3339 format
+	UpdatedAt    string            `json:"updated_at"` // RFC3339 format
 	LastError    string            `json:"last_error,omitempty"`
 }
 
@@ -59,16 +59,16 @@ type Dependency struct {
 
 // LogEntry represents a log entry of a project
 type LogEntry struct {
-	ID        int64     `json:"id"`
-	ProjectID string    `json:"project_id"`
-	Level     string    `json:"level"`
-	Message   string    `json:"message"`
-	Timestamp time.Time `json:"timestamp"`
+	ID        int64  `json:"id"`
+	ProjectID string `json:"project_id"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+	Timestamp string `json:"timestamp"` // RFC3339 format
 }
 
 // NewProject creates a new Project instance
 func NewProject(name, path, domain string, projectType ProjectType) *Project {
-	now := time.Now()
+	now := time.Now().Format(time.RFC3339)
 	return &Project{
 		ID:           generateID(name),
 		Name:         name,
@@ -102,20 +102,20 @@ func (p *Project) HasError() bool {
 // UpdateStatus updates the project status
 func (p *Project) UpdateStatus(status Status) {
 	p.Status = status
-	p.UpdatedAt = time.Now()
+	p.UpdatedAt = time.Now().Format(time.RFC3339)
 }
 
 // SetError sets an error on the project
 func (p *Project) SetError(err error) {
 	p.Status = StatusError
 	p.LastError = err.Error()
-	p.UpdatedAt = time.Now()
+	p.UpdatedAt = time.Now().Format(time.RFC3339)
 }
 
 // ClearError clears the project error
 func (p *Project) ClearError() {
 	p.LastError = ""
-	p.UpdatedAt = time.Now()
+	p.UpdatedAt = time.Now().Format(time.RFC3339)
 }
 
 // HasUnsatisfiedDependencies checks if there are unsatisfied dependencies
