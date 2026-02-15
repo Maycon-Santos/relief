@@ -1,0 +1,16 @@
+name: "hello-world"
+domain: "hello.sofredor.local"
+type: "node"
+
+dependencies:
+  - name: "node"
+    version: ">=18.0.0"
+    managed: false
+
+scripts:
+  dev: "node index.js"
+  install: "npm install"
+
+env:
+  PORT: "3000"
+  NODE_ENV: "development"

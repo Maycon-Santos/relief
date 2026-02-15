@@ -1,0 +1,38 @@
+# Configuração remota (opcional)
+remote:
+  url: ""  # URL para config remota (ex: https://raw.githubusercontent.com/company/configs/main/sofredor.yaml)
+  refresh_interval: "1h"
+  enabled: false
+
+# Lista de projetos
+projects:
+  - name: "hello-world"
+    path: "./examples/hello-world"
+    domain: "hello.sofredor.local"
+    type: "node"
+    auto_start: false
+    dependencies:
+      - name: "node"
+        version: ">=18.0.0"
+        managed: false
+    scripts:
+      dev: "node index.js"
+    env:
+      PORT: "3000"
+      NODE_ENV: "development"
+
+# Versões de ferramentas
+tools:
+  node:
+    version: "18.19.0"
+  python:
+    version: "3.11.0"
+  traefik:
+    version: "2.10.7"
+
+# Configuração do proxy reverso
+proxy:
+  http_port: 80
+  https_port: 443
+  dashboard: true
+  auto_manage: true

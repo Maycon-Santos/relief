@@ -1,0 +1,59 @@
+# Configurações locais (CRÍTICO - evitar commit de secrets)
+config.local.yaml
+*.local.yaml
+.env
+.env.local
+
+# Database e estado local
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependências e binários baixados
+.sofredor/
+
+# Build artifacts
+build/bin/
+dist/
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.app
+*.AppImage
+
+# Go
+vendor/
+*.test
+*.out
+coverage.txt
+profile.out
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/wailsjs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

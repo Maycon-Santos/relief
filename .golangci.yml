@@ -1,0 +1,55 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - gofmt
+    - govet
+    - staticcheck
+    - gosimple
+    - ineffassign
+    - unused
+    - errcheck
+    - misspell
+    - gocyclo
+    - goconst
+    - unconvert
+    - unparam
+    - prealloc
+    - revive
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  misspell:
+    locale: US
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+      - name: package-comments
+        severity: warning
+        disabled: false
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    - path: internal/
+      linters:
+        - revive
+      text: "exported: exported method"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

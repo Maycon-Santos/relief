@@ -1,0 +1,23 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "sofredor-orchestrator",
+  "outputfilename": "sofredor-orchestrator",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Omelete",
+    "email": "dev@omelete.com"
+  },
+  "info": {
+    "companyName": "Omelete",
+    "productName": "Sofredor Orchestrator",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright © 2026 Omelete",
+    "comments": "Ferramenta de orquestração de desenvolvimento local híbrida"
+  },
+  "nsisType": "multiple",
+  "assetdir": "frontend/dist",
+  "reloaddirs": "frontend/src"
+}

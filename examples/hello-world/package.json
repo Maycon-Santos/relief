@@ -1,0 +1,13 @@
+{
+  "name": "hello-world",
+  "version": "1.0.0",
+  "description": "Exemplo simples para testar o SofredorOrchestrator",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js"
+  },
+  "keywords": ["sofredor", "example"],
+  "author": "Omelete",
+  "license": "MIT"
+}

@@ -1,0 +1,84 @@
+# Exemplo de configuração remota (upstream) que uma empresa publicaria
+# URL: https://raw.githubusercontent.com/company/configs/main/sofredor.yaml
+
+# Projetos da empresa
+projects:
+  - name: "api-gateway"
+    path: "~/projects/api-gateway"
+    domain: "api.sofredor.local"
+    type: "node"
+    port: 3000
+    auto_start: true
+    dependencies:
+      - name: "node"
+        version: ">=18.0.0"
+      - name: "postgres"
+        version: "15"
+        managed: true
+    scripts:
+      dev: "npm run dev"
+      install: "npm ci"
+    env:
+      DATABASE_URL: "postgresql://localhost:5432/gateway"
+      NODE_ENV: "development"
+
+  - name: "user-service"
+    path: "~/projects/user-service"
+    domain: "users.sofredor.local"
+    type: "python"
+    port: 8000
+    auto_start: false
+    dependencies:
+ - name: "python"
+        version: ">=3.9"
+      - name: "postgres"
+        version: "15"
+        managed: true
+    scripts:
+      dev: "uvicorn main:app --reload --port 8000"
+      install: "pip install -r requirements.txt"
+    env:
+      DATABASE_URL: "postgresql://localhost:5432/users"
+      PYTHONUNBUFFERED: "1"
+
+  - name: "frontend-app"
+    path: "~/projects/frontend-app"
+    domain: "app.sofredor.local"
+    type: "node"
+    port: 5173
+    auto_start: false
+    dependencies:
+      - name: "node"
+        version: ">=18.0.0"
+    scripts:
+      dev: "npm run dev"
+      install: "npm install"
+    env:
+      VITE_API_URL: "http://api.sofredor.local"
+
+  - name: "legacy-monolith"
+    path: "~/projects/legacy-monolith"
+    domain: "legacy.sofredor.local"
+    type: "docker"
+    auto_start: false
+    scripts:
+      dev: "docker-compose up"
+      install: "docker-compose pull"
+
+# Versões padronizadas de ferramentas
+tools:
+  node:
+    version: "18.19.0"
+  python:
+    version: "3.11.7"
+  postgres:
+    version: "15.5"
+  traefik:
+    version: "2.10.7"
+
+# Configuração padrão do proxy
+proxy:
+  http_port: 80
+  https_port: 443
+  dashboard: true
+  auto_manage: true
