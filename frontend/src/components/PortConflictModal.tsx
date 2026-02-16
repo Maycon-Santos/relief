@@ -1,6 +1,15 @@
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, Terminal, Hash } from "lucide-react";
 import type { PortConflict } from "../services/wails";
-import "./PortConflictModal.css";
 
 interface PortConflictModalProps {
   conflict: PortConflict;
@@ -28,59 +37,60 @@ export function PortConflictModal({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content port-conflict-modal">
-        <div className="modal-header">
-          <h2>⚠️ Port Already in Use</h2>
-        </div>
+    <Dialog open onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            Port Already in Use
+          </DialogTitle>
+          <DialogDescription>
+            Another application is already using this port. You can force stop the conflicting process.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="modal-body">
-          <div className="conflict-info">
-            <div className="conflict-item">
-              <strong>Port:</strong>
-              <span className="conflict-port">{conflict.port}</span>
+        <div className="space-y-3 py-4">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+            <Hash className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
+              <div className="text-xs text-muted-foreground">Port</div>
+              <div className="font-mono font-semibold">{conflict.port}</div>
             </div>
-            <div className="conflict-item">
-              <strong>Process ID:</strong>
-              <span className="conflict-pid">{conflict.pid}</span>
-            </div>
-            {conflict.command && (
-              <div className="conflict-item">
-                <strong>Command:</strong>
-                <code className="conflict-command">{conflict.command}</code>
-              </div>
-            )}
           </div>
 
-          <div className="conflict-message">
-            <p>
-              Another application is already using port <strong>{conflict.port}</strong>.
-            </p>
-            <p>
-              You can force stop the conflicting process to free up the port.
-            </p>
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+            <Terminal className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
+              <div className="text-xs text-muted-foreground">Process ID</div>
+              <div className="font-mono font-semibold">{conflict.pid}</div>
+            </div>
           </div>
+
+          {conflict.command && (
+            <div className="rounded-lg border border-border bg-muted/50 p-3">
+              <div className="text-xs text-muted-foreground mb-1">Command</div>
+              <code className="text-xs font-mono break-all">{conflict.command}</code>
+            </div>
+          )}
         </div>
 
-        <div className="modal-footer">
-          <button
-            type="button"
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
             onClick={onCancel}
-            className="btn-secondary"
             disabled={killing}
           >
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="destructive"
             onClick={handleKill}
-            className="btn-danger"
             disabled={killing}
           >
             {killing ? "Stopping..." : "Force Stop Process"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

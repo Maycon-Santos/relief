@@ -1,49 +1,60 @@
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
 interface StatusBadgeProps {
   status: string;
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const getStatusStyle = () => {
+  const getStatusConfig = () => {
     switch (status) {
       case 'running':
-        return { color: '#10b981', label: 'Rodando' };
+        return { 
+          variant: 'default' as const, 
+          className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+          label: 'Rodando',
+          pulse: true
+        };
       case 'stopped':
-        return { color: '#6b7280', label: 'Parado' };
+        return { 
+          variant: 'secondary' as const, 
+          className: 'bg-muted text-muted-foreground border-border',
+          label: 'Parado',
+          pulse: false
+        };
       case 'starting':
-        return { color: '#f59e0b', label: 'Iniciando' };
+        return { 
+          variant: 'default' as const, 
+          className: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+          label: 'Iniciando',
+          pulse: true
+        };
       case 'error':
-        return { color: '#ef4444', label: 'Error' };
+        return { 
+          variant: 'destructive' as const, 
+          className: 'bg-destructive/15 text-destructive border-destructive/30',
+          label: 'Error',
+          pulse: false
+        };
       default:
-        return { color: '#9ca3af', label: 'Desconhecido' };
+        return { 
+          variant: 'secondary' as const, 
+          className: 'bg-muted text-muted-foreground border-border',
+          label: 'Desconhecido',
+          pulse: false
+        };
     }
   };
 
-  const { color, label } = getStatusStyle();
+  const { className, label, pulse } = getStatusConfig();
 
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        padding: '4px 12px',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: '600',
-        backgroundColor: `${color}20`,
-        color: color,
-      }}
-    >
-      <span
-        style={{
-          width: '6px',
-          height: '6px',
-          borderRadius: '50%',
-          backgroundColor: color,
-          marginRight: '6px',
-          animation: status === 'running' ? 'pulse 2s infinite' : 'none',
-        }}
-      />
+    <Badge variant="outline" className={cn("flex items-center gap-1.5", className)}>
+      <span className={cn(
+        "h-1.5 w-1.5 rounded-full bg-current",
+        pulse && "animate-pulse"
+      )} />
       {label}
-    </span>
+    </Badge>
   );
 }
