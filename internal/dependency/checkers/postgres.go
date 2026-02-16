@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // PostgresChecker verifica e gerencia PostgreSQL

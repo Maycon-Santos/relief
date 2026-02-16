@@ -61,4 +61,21 @@ export const api = {
   async killProcessByPID(pid: number): Promise<void> {
     return await App.KillProcessByPID(pid);
   },
+
+  // Git-related functions
+  async getProjectGitInfo(id: string): Promise<any> {
+    return await App.GetProjectGitInfo(id);
+  },
+
+  async checkoutProjectBranch(id: string, branch: string): Promise<void> {
+    return await App.CheckoutProjectBranch(id, branch);
+  },
+
+  async syncProjectBranch(id: string): Promise<void> {
+    return await App.SyncProjectBranch(id);
+  },
+
+  async refreshProjectGitInfo(id: string): Promise<void> {
+    return await App.RefreshProjectGitInfo(id);
+  },
 };

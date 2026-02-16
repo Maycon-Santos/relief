@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/omelete/relief/pkg/fileutil"
-	"github.com/omelete/relief/pkg/httputil"
+	"github.com/relief-org/relief/pkg/fileutil"
+	"github.com/relief-org/relief/pkg/httputil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +24,7 @@ func NewLoader() *Loader {
 	}
 }
 
-// LoadConfig carrega a configuração completa (remote + local merge)
+// LoadConfig carrega a configuração completa (remote + global + local merge)
 func (l *Loader) LoadConfig(remoteURL, localPath string) (*Config, error) {
 	var finalConfig *Config
 
@@ -39,7 +39,23 @@ func (l *Loader) LoadConfig(remoteURL, localPath string) (*Config, error) {
 		}
 	}
 
-	// 2. Carregar configuração local (se existir)
+	// 2. Carregar configuração global/externa (se existir)
+	globalPath, err := GetGlobalConfigPath()
+	if err == nil && fileutil.Exists(globalPath) {
+		globalConfig, err := l.loadLocalConfig(globalPath)
+		if err != nil {
+			fmt.Printf("Aviso: não foi possível carregar config global: %v\n", err)
+		} else {
+			if finalConfig == nil {
+				finalConfig = globalConfig
+			} else {
+				// Fazer merge: global sobrescreve remote
+				finalConfig.MergeWith(globalConfig)
+			}
+		}
+	}
+
+	// 3. Carregar configuração local (se existir)
 	if fileutil.Exists(localPath) {
 		localConfig, err := l.loadLocalConfig(localPath)
 		if err != nil {
@@ -49,17 +65,17 @@ func (l *Loader) LoadConfig(remoteURL, localPath string) (*Config, error) {
 		if finalConfig == nil {
 			finalConfig = localConfig
 		} else {
-			// Fazer merge: local sobrescreve remote
+			// Fazer merge: local sobrescreve global/remote
 			finalConfig.MergeWith(localConfig)
 		}
 	}
 
-	// 3. Se não houver nenhuma config, usar defaults
+	// 4. Se não houver nenhuma config, usar defaults
 	if finalConfig == nil {
 		finalConfig = defaultConfig()
 	}
 
-	// 4. Validar configuração final
+	// 5. Validar configuração final
 	if err := finalConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("erro ao validar configuração: %w", err)
 	}
@@ -157,4 +173,13 @@ func GetLocalConfigPath() (string, error) {
 		return "", err
 	}
 	return reliefDir + "/config.local.yaml", nil
+}
+
+// GetGlobalConfigPath retorna o caminho do arquivo de configuração global
+func GetGlobalConfigPath() (string, error) {
+	reliefDir, err := fileutil.GetReliefDir()
+	if err != nil {
+		return "", err
+	}
+	return reliefDir + "/config.global.yaml", nil
 }

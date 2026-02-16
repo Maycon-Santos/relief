@@ -15,6 +15,16 @@ export type ProjectStatus =
   | "error"
   | "unknown";
 
+// Git-related types
+export interface GitInfo {
+  is_repository: boolean;
+  current_branch?: string;
+  available_branches?: string[];
+  remote_url?: string;
+  has_changes?: boolean;
+  last_commit?: string;
+}
+
 export interface AppStatus {
   total_projects: number;
   running: number;

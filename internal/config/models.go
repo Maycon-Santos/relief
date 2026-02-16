@@ -5,10 +5,14 @@ import "time"
 
 // Config é a estrutura principal de configuração
 type Config struct {
-	Remote   RemoteConfig            `yaml:"remote"`
-	Projects []ProjectConfig         `yaml:"projects"`
-	Tools    map[string]ToolVersion  `yaml:"tools"`
-	Proxy    ProxyConfig             `yaml:"proxy"`
+	Remote              RemoteConfig                 `yaml:"remote"`
+	Projects            []ProjectConfig              `yaml:"projects"`
+	Tools               map[string]ToolVersion       `yaml:"tools"`
+	Proxy               ProxyConfig                  `yaml:"proxy"`
+	ManagedDependencies map[string]ManagedDependency `yaml:"managed_dependencies"`
+	Development         DevelopmentConfig            `yaml:"development"`
+	Logging             LoggingConfig                `yaml:"logging"`
+	HealthChecks        map[string]HealthCheckConfig `yaml:"health_checks"`
 }
 
 // RemoteConfig contém configurações para carregar config remota
@@ -22,6 +26,7 @@ type RemoteConfig struct {
 type ProjectConfig struct {
 	Name         string            `yaml:"name"`
 	Path         string            `yaml:"path"`
+	Repository   *RepositoryConfig `yaml:"repository,omitempty"`
 	Domain       string            `yaml:"domain"`
 	Type         string            `yaml:"type"` // node, python, docker, java
 	Dependencies []DependencySpec  `yaml:"dependencies"`
@@ -31,11 +36,57 @@ type ProjectConfig struct {
 	AutoStart    bool              `yaml:"auto_start"`
 }
 
+// RepositoryConfig define configuração de repositório Git
+type RepositoryConfig struct {
+	URL       string `yaml:"url"`
+	Branch    string `yaml:"branch"`
+	AutoClone bool   `yaml:"auto_clone"`
+}
+
 // DependencySpec especifica uma dependência de um projeto
 type DependencySpec struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
-	Managed bool   `yaml:"managed"` // Se o orquestrador deve prover a dependência
+	Name    string                 `yaml:"name"`
+	Version string                 `yaml:"version"`
+	Managed bool                   `yaml:"managed"` // Se o orquestrador deve prover a dependência
+	Config  map[string]interface{} `yaml:"config,omitempty"`
+}
+
+// ManagedDependency define configuração para dependências gerenciadas
+type ManagedDependency struct {
+	InstallCommand string            `yaml:"install_command"`
+	StartCommand   string            `yaml:"start_command"`
+	StopCommand    string            `yaml:"stop_command"`
+	ConfigFile     string            `yaml:"config_file,omitempty"`
+	DataDir        string            `yaml:"data_dir,omitempty"`
+	InitDatabases  []DatabaseConfig  `yaml:"init_databases,omitempty"`
+	Environment    map[string]string `yaml:"environment,omitempty"`
+}
+
+// DatabaseConfig define configuração de banco de dados
+type DatabaseConfig struct {
+	Name  string `yaml:"name"`
+	Owner string `yaml:"owner,omitempty"`
+}
+
+// DevelopmentConfig define configurações de desenvolvimento
+type DevelopmentConfig struct {
+	StartupOrder  []string          `yaml:"startup_order"`
+	GlobalScripts map[string]string `yaml:"global_scripts"`
+}
+
+// LoggingConfig define configurações de logging
+type LoggingConfig struct {
+	Level  string `yaml:"level"`
+	Format string `yaml:"format"`
+	Output string `yaml:"output"`
+}
+
+// HealthCheckConfig define configurações de health check
+type HealthCheckConfig struct {
+	Command  string `yaml:"command"`
+	Interval string `yaml:"interval"`
+	Timeout  string `yaml:"timeout"`
+	Retries  int    `yaml:"retries"`
 }
 
 // ToolVersion especifica a versão de uma ferramenta

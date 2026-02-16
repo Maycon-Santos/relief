@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/omelete/relief/internal/domain"
+	"github.com/relief-org/relief/internal/domain"
 )
 
 // ProjectRunner define a interface para executores de projeto

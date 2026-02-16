@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/omelete/relief/internal/domain"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/internal/domain"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // DockerRunner executa projetos usando Docker/Docker Compose
@@ -30,7 +30,7 @@ func (r *DockerRunner) Start(ctx context.Context, project *domain.Project) error
 	// - Gerar docker-compose.yml dinâmico se necessário
 	// - Usar github.com/docker/docker/client para gerenciar containers
 	// - Add relief.project=<name> labels to containers
-	
+
 	r.logger.Info("DockerRunner.Start chamado", map[string]interface{}{
 		"project": project.Name,
 	})

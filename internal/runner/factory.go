@@ -4,8 +4,8 @@ package runner
 import (
 	"fmt"
 
-	"github.com/omelete/relief/internal/domain"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/internal/domain"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // Factory cria runners baseado no tipo de projeto
@@ -25,14 +25,14 @@ func (f *Factory) CreateRunner(project *domain.Project) (ProjectRunner, error) {
 	switch project.Type {
 	case domain.ProjectTypeDocker:
 		return NewDockerRunner(f.logger), nil
-	
+
 	case domain.ProjectTypeNode,
 		domain.ProjectTypePython,
 		domain.ProjectTypeGo,
 		domain.ProjectTypeJava,
 		domain.ProjectTypeRuby:
 		return NewNativeRunner(f.logger), nil
-	
+
 	default:
 		return nil, fmt.Errorf("tipo de projeto não suportado: %s", project.Type)
 	}

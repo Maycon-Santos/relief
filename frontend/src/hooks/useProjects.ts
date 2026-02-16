@@ -88,6 +88,14 @@ export function useProjects() {
     }
   };
 
+  const updateProject = useCallback((updatedProject: Project) => {
+    setProjects((prevProjects) =>
+      prevProjects.map((project) =>
+        project.id === updatedProject.id ? updatedProject : project,
+      ),
+    );
+  }, []);
+
   return {
     projects,
     loading,
@@ -97,6 +105,7 @@ export function useProjects() {
     restartProject,
     removeProject,
     addProject,
+    updateProject,
     refresh: loadProjects,
   };
 }

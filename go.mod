@@ -1,4 +1,4 @@
-module github.com/omelete/relief
+module github.com/relief-org/relief
 
 go 1.22.0
 

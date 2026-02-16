@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/omelete/relief/pkg/fileutil"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/pkg/fileutil"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // HostsManager gerencia entradas no arquivo /etc/hosts

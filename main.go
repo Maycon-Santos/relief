@@ -4,7 +4,7 @@ import (
 	"embed"
 	"log"
 
-	"github.com/omelete/relief/internal/app"
+	"github.com/relief-org/relief/internal/app"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"

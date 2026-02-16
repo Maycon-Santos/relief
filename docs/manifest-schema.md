@@ -482,4 +482,4 @@ Future versions will maintain backward compatibility.
 
 ## Support
 
-Questions about the schema? [Open an issue](https://github.com/omelete/relief/issues/new)
+Questions about the schema? [Open an issue](https://github.com/your-org/relief/issues/new)

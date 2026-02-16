@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/omelete/relief/pkg/fileutil"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/pkg/fileutil"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // PythonChecker verifica e instala Python
@@ -29,7 +29,7 @@ func NewPythonChecker(log *logger.Logger) *PythonChecker {
 func (c *PythonChecker) Check(ctx context.Context) (string, error) {
 	// Tentar python3 primeiro, depois python
 	pythonCmds := []string{"python3", "python"}
-	
+
 	if c.path != "" {
 		pythonCmds = []string{
 			filepath.Join(c.path, "python3"),

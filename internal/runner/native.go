@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/omelete/relief/internal/domain"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/internal/domain"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // NativeRunner executa projetos como processos nativos do SO

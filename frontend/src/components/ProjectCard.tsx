@@ -21,6 +21,7 @@ import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
 import { api, type PortConflict } from "../services/wails";
 import type { Project } from "../types/project";
 import { DependencyAlert } from "./DependencyAlert";
+import { GitControls } from "./GitControls";
 import { PortConflictModal } from "./PortConflictModal";
 
 interface ProjectCardProps {
@@ -43,6 +44,11 @@ export function ProjectCard({
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [portConflict, setPortConflict] = useState<PortConflict | null>(null);
+
+	const handleGitInfoUpdate = (gitInfo: any) => {
+		// Callback para quando as informações Git são atualizadas
+		console.log("Git info updated:", gitInfo);
+	};
 
 	const handleAction = async (
 		action: () => Promise<void>,
@@ -111,10 +117,10 @@ export function ProjectCard({
 			<CardHeader className="pb-4">
 				<div className="flex items-start justify-between gap-3">
 					<div className="flex-1 min-w-0">
-						<h3 className="text-xl font-bold mb-2 text-white">{project.name}</h3>
-						<p className="text-sm text-gray-400 truncate">
-							{project.path}
-						</p>
+						<h3 className="text-xl font-bold mb-2 text-white">
+							{project.name}
+						</h3>
+						<p className="text-sm text-gray-400 truncate">{project.path}</p>
 					</div>
 					{getStatusBadge()}
 				</div>
@@ -123,30 +129,42 @@ export function ProjectCard({
 			<CardContent className="space-y-3 flex-1 pb-4">
 				{project.domain && (
 					<button
-					type="button"
-					onClick={() => BrowserOpenURL(`http://${project.domain}`)}
-					className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium cursor-pointer"
-				>
-					<ExternalLink className="h-4 w-4" />
-					{project.domain}
-				</button>
+						type="button"
+						onClick={() => BrowserOpenURL(`http://${project.domain}`)}
+						className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium cursor-pointer"
+					>
+						<ExternalLink className="h-4 w-4" />
+						{project.domain}
+					</button>
 				)}
 
 				<div className="flex flex-wrap gap-2">
-					<Badge variant="secondary" className="text-xs font-normal bg-zinc-800/80 text-gray-300 border-zinc-700/50">
+					<Badge
+						variant="secondary"
+						className="text-xs font-normal bg-zinc-800/80 text-gray-300 border-zinc-700/50"
+					>
 						{project.type === "node" ? "Node.js" : project.type}
 					</Badge>
 					{project.port > 0 && (
-						<Badge variant="secondary" className="text-xs font-normal bg-zinc-800/80 text-gray-300 border-zinc-700/50">
+						<Badge
+							variant="secondary"
+							className="text-xs font-normal bg-zinc-800/80 text-gray-300 border-zinc-700/50"
+						>
 							Port {project.port}
 						</Badge>
 					)}
 					{project.pid && (
-						<Badge variant="secondary" className="text-xs font-normal bg-zinc-800/80 text-gray-300 border-zinc-700/50">
+						<Badge
+							variant="secondary"
+							className="text-xs font-normal bg-zinc-800/80 text-gray-300 border-zinc-700/50"
+						>
 							PID: {project.pid}
 						</Badge>
 					)}
 				</div>
+
+				{/* Git Controls */}
+				<GitControls project={project} onGitInfoUpdate={handleGitInfoUpdate} />
 
 				{unsatisfiedDeps.length > 0 && (
 					<DependencyAlert dependencies={unsatisfiedDeps} />

@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	"github.com/omelete/relief/internal/domain"
-	"github.com/omelete/relief/internal/dependency/checkers"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/internal/dependency/checkers"
+	"github.com/relief-org/relief/internal/domain"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // Manager manages dependency verification and installation
@@ -23,10 +23,10 @@ type Manager struct {
 type Checker interface {
 	// Check verifies if the dependency is installed and returns the version
 	Check(ctx context.Context) (string, error)
-	
+
 	// Install installs the dependency
 	Install(ctx context.Context, version string) error
-	
+
 	// GetPath returns the path of the dependency binary
 	GetPath() string
 }
@@ -55,7 +55,7 @@ func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project
 
 	for i := range project.Dependencies {
 		dep := &project.Dependencies[i]
-		
+
 		if err := m.checkDependency(ctx, dep); err != nil {
 			m.logger.Warn("Dependency not satisfied", map[string]interface{}{
 				"dependency": dep.Name,
@@ -92,7 +92,7 @@ func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) e
 				"dependency": dep.Name,
 				"version":    dep.RequiredVersion,
 			})
-			
+
 			if err := checker.Install(ctx, dep.RequiredVersion); err != nil {
 				return fmt.Errorf("error installing: %w", err)
 			}
@@ -206,7 +206,7 @@ func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependenc
 
 	dep.Version = version
 	dep.Satisfied = true
-	
+
 	m.logger.Info("Generic dependency verified", map[string]interface{}{
 		"dependency": dep.Name,
 		"version":    version,

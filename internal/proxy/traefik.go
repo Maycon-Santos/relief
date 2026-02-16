@@ -14,9 +14,9 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/omelete/relief/internal/domain"
-	"github.com/omelete/relief/pkg/fileutil"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/internal/domain"
+	"github.com/relief-org/relief/pkg/fileutil"
+	"github.com/relief-org/relief/pkg/logger"
 	"gopkg.in/yaml.v3"
 )
 

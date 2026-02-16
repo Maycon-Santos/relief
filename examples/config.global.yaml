@@ -1,0 +1,54 @@
+# Exemplo: Configuração Global da Organização
+# Este arquivo pode ser compartilhado via Git, servidor interno, ou URL remota
+
+# Configuração remota (opcional)
+remote:
+  enabled: true
+  url: "https://config.exemplo.com/relief/config.yaml"
+  refresh_interval: "1h"
+
+# Ferramentas padronizadas para toda a organização
+tools:
+  node:
+    version: "20.11.0"
+    global_packages: 
+      - "npm@latest"
+      - "pnpm@latest"
+  docker:
+    version: "24.0.0"
+  postgres:
+    version: "15"
+    port: 5432
+
+# Configuração de proxy padrão
+proxy:
+  http_port: 80
+  https_port: 443
+  dashboard: true
+  auto_manage: true
+
+# Dependências globais obrigatórias
+dependencies:
+  required:
+    - name: "docker"
+      version: ">= 24.0.0"
+    - name: "node"
+      version: ">= 18.0.0"
+
+# Configurações padrão para novos projetos
+project_defaults:
+  runner: "docker"
+  auto_clone: true
+  dependencies:
+    postgres:
+      enabled: true
+      database: "app_dev"
+    redis:
+      enabled: true
+      port: 6379
+
+# Configurações específicas do ambiente organizacional
+environment:
+  company_name: "Relief Organization"
+  registry_url: "registry.exemplo.com"
+  git_base_url: "https://github.com/relief-org"

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/omelete/relief/internal/domain"
+	"github.com/relief-org/relief/internal/domain"
 )
 
 // ProjectRepository gerencia persistência de projetos

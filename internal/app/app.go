@@ -5,30 +5,33 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/omelete/relief/internal/config"
-	"github.com/omelete/relief/internal/dependency"
-	"github.com/omelete/relief/internal/domain"
-	"github.com/omelete/relief/internal/proxy"
-	"github.com/omelete/relief/internal/runner"
-	"github.com/omelete/relief/internal/storage"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/internal/config"
+	"github.com/relief-org/relief/internal/dependency"
+	"github.com/relief-org/relief/internal/domain"
+	"github.com/relief-org/relief/internal/git"
+	"github.com/relief-org/relief/internal/proxy"
+	"github.com/relief-org/relief/internal/runner"
+	"github.com/relief-org/relief/internal/storage"
+	"github.com/relief-org/relief/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App é a estrutura principal da aplicação
 type App struct {
-	ctx           context.Context
-	logger        *logger.Logger
-	config        *config.Config
-	configLoader  *config.Loader
-	db            *storage.DB
-	projectRepo   *storage.ProjectRepository
-	logRepo       *storage.LogRepository
-	runnerFactory *runner.Factory
-	runners       map[string]runner.ProjectRunner
-	dependencyMgr *dependency.Manager
-	traefikMgr    *proxy.TraefikManager
-	hostsMgr      *proxy.HostsManager
+	ctx            context.Context
+	logger         *logger.Logger
+	config         *config.Config
+	configLoader   *config.Loader
+	db             *storage.DB
+	projectRepo    *storage.ProjectRepository
+	logRepo        *storage.LogRepository
+	runnerFactory  *runner.Factory
+	runners        map[string]runner.ProjectRunner
+	dependencyMgr  *dependency.Manager
+	enhancedDepMgr *dependency.EnhancedManager
+	gitManager     *git.Manager
+	traefikMgr     *proxy.TraefikManager
+	hostsMgr       *proxy.HostsManager
 }
 
 // NewApp cria uma nova instância da aplicação
@@ -90,11 +93,17 @@ func (a *App) Startup(ctx context.Context) {
 
 	a.config = cfg
 
+	// Inicializar Git manager
+	a.gitManager = git.NewManager(a.logger)
+
 	// Inicializar runner factory
 	a.runnerFactory = runner.NewFactory(a.logger)
 
 	// Inicializar dependency manager
 	a.dependencyMgr = dependency.NewManager(a.logger)
+
+	// Inicializar enhanced dependency manager
+	a.enhancedDepMgr = dependency.NewEnhancedManager(a.logger, cfg)
 
 	// Inicializar Traefik manager
 	traefikMgr, err := proxy.NewTraefikManager(
@@ -121,6 +130,9 @@ func (a *App) Startup(ctx context.Context) {
 
 	// Limpar processos órfãos de execuções anteriores
 	a.cleanupOrphanProcesses()
+
+	// Sincronizar projetos da configuração
+	a.syncConfigProjects()
 
 	a.logger.Info("Relief Orchestrator started successfully", nil)
 }
@@ -217,6 +229,11 @@ func (a *App) StartProject(id string) error {
 	// Verificar dependências
 	if err := a.dependencyMgr.CheckDependencies(a.ctx, project); err != nil {
 		return fmt.Errorf("erro ao verificar dependências: %w", err)
+	}
+
+	// Iniciar dependências gerenciadas
+	if err := a.enhancedDepMgr.StartManagedDependencies(a.ctx, project); err != nil {
+		return fmt.Errorf("erro ao iniciar dependências gerenciadas: %w", err)
 	}
 
 	// Atualizar projeto com resultados da verificação
@@ -325,6 +342,14 @@ func (a *App) StopProject(id string) error {
 		a.traefikMgr.RemoveProject(id)
 	}
 
+	// Parar dependências gerenciadas
+	if err := a.enhancedDepMgr.StopManagedDependencies(a.ctx, project); err != nil {
+		a.logger.Warn("Erro ao parar dependências gerenciadas", map[string]interface{}{
+			"project": project.Name,
+			"error":   err.Error(),
+		})
+	}
+
 	// Atualizar status
 	project.UpdateStatus(domain.StatusStopped)
 	project.PID = 0
@@ -379,6 +404,16 @@ func (a *App) AddLocalProject(path string) error {
 	existing, _ := a.projectRepo.GetByName(project.Name)
 	if existing != nil {
 		return fmt.Errorf("project '%s' already exists", project.Name)
+	}
+
+	// Obter informações Git
+	if gitInfo, err := a.gitManager.GetGitInfo(a.ctx, path); err != nil {
+		a.logger.Warn("Erro ao obter informações Git para novo projeto", map[string]interface{}{
+			"path":  path,
+			"error": err.Error(),
+		})
+	} else {
+		project.UpdateGitInfo(gitInfo)
 	}
 
 	// Salvar no banco
@@ -560,4 +595,323 @@ func (a *App) cleanupOrphanProcesses() {
 	}
 
 	a.logger.Info("Limpeza de processos órfãos concluída", nil)
+}
+
+// syncConfigProjects sincroniza projetos da configuração com o banco de dados e clona repositórios se necessário
+func (a *App) syncConfigProjects() {
+	a.logger.Info("Sincronizando projetos da configuração", nil)
+
+	for _, projectConfig := range a.config.Projects {
+		// Verificar se o projeto já existe no banco
+		existingProject, err := a.projectRepo.GetByName(projectConfig.Name)
+		if err != nil && err.Error() != "project not found" {
+			a.logger.Warn("Erro ao buscar projeto existente", map[string]interface{}{
+				"project": projectConfig.Name,
+				"error":   err.Error(),
+			})
+			continue
+		}
+
+		// Clonar repositório se necessário
+		if projectConfig.Repository != nil && projectConfig.Repository.AutoClone {
+			if err := a.ensureRepositoryCloned(projectConfig); err != nil {
+				a.logger.Warn("Erro ao clonar repositório", map[string]interface{}{
+					"project": projectConfig.Name,
+					"repo":    projectConfig.Repository.URL,
+					"error":   err.Error(),
+				})
+				continue
+			}
+		}
+
+		// Criar ou atualizar projeto
+		if existingProject == nil {
+			// Criar novo projeto
+			project := a.createProjectFromConfig(projectConfig)
+			if err := a.projectRepo.Create(project); err != nil {
+				a.logger.Warn("Erro ao salvar novo projeto", map[string]interface{}{
+					"project": projectConfig.Name,
+					"error":   err.Error(),
+				})
+			} else {
+				a.logger.Info("Projeto criado da configuração", map[string]interface{}{
+					"project": projectConfig.Name,
+				})
+			}
+		} else {
+			// Atualizar projeto existente
+			a.updateProjectFromConfig(existingProject, projectConfig)
+			if err := a.projectRepo.Update(existingProject); err != nil {
+				a.logger.Warn("Erro ao atualizar projeto", map[string]interface{}{
+					"project": projectConfig.Name,
+					"error":   err.Error(),
+				})
+			} else {
+				a.logger.Info("Projeto atualizado da configuração", map[string]interface{}{
+					"project": projectConfig.Name,
+				})
+			}
+		}
+	}
+}
+
+// ensureRepositoryCloned clona um repositório se ele não existir
+func (a *App) ensureRepositoryCloned(projectConfig config.ProjectConfig) error {
+	if projectConfig.Repository == nil {
+		return nil
+	}
+
+	a.logger.Info("Verificando repositório", map[string]interface{}{
+		"project": projectConfig.Name,
+		"path":    projectConfig.Path,
+		"repo":    projectConfig.Repository.URL,
+	})
+
+	return a.gitManager.CloneOrUpdate(
+		a.ctx,
+		projectConfig.Repository.URL,
+		projectConfig.Path,
+		projectConfig.Repository.Branch,
+	)
+}
+
+// createProjectFromConfig cria um novo projeto a partir da configuração
+func (a *App) createProjectFromConfig(projectConfig config.ProjectConfig) *domain.Project {
+	project := domain.NewProject(
+		projectConfig.Name,
+		projectConfig.Path,
+		projectConfig.Domain,
+		domain.ProjectType(projectConfig.Type),
+	)
+
+	// Configurar porta
+	project.Port = projectConfig.Port
+
+	// Configurar scripts
+	project.Scripts = make(map[string]string)
+	for k, v := range projectConfig.Scripts {
+		project.Scripts[k] = v
+	}
+
+	// Configurar env
+	project.Env = make(map[string]string)
+	for k, v := range projectConfig.Env {
+		project.Env[k] = v
+	}
+
+	// Configurar dependências
+	project.Dependencies = make([]domain.Dependency, 0, len(projectConfig.Dependencies))
+	for _, dep := range projectConfig.Dependencies {
+		project.Dependencies = append(project.Dependencies, domain.Dependency{
+			Name:            dep.Name,
+			Version:         "",
+			RequiredVersion: dep.Version,
+			Managed:         dep.Managed,
+			Satisfied:       false,
+		})
+	}
+
+	// Obter informações Git se o diretório existir
+	if a.gitManager != nil {
+		if gitInfo, err := a.gitManager.GetGitInfo(a.ctx, projectConfig.Path); err != nil {
+			a.logger.Debug("Erro ao obter informações Git para projeto da config", map[string]interface{}{
+				"project": projectConfig.Name,
+				"path":    projectConfig.Path,
+				"error":   err.Error(),
+			})
+		} else {
+			project.UpdateGitInfo(gitInfo)
+		}
+	}
+
+	return project
+}
+
+// updateProjectFromConfig atualiza um projeto existente a partir da configuração
+func (a *App) updateProjectFromConfig(project *domain.Project, projectConfig config.ProjectConfig) {
+	// Atualizar configurações básicas
+	project.Path = projectConfig.Path
+	project.Domain = projectConfig.Domain
+	project.Type = domain.ProjectType(projectConfig.Type)
+	project.Port = projectConfig.Port
+
+	// Atualizar scripts
+	project.Scripts = make(map[string]string)
+	for k, v := range projectConfig.Scripts {
+		project.Scripts[k] = v
+	}
+
+	// Atualizar env
+	project.Env = make(map[string]string)
+	for k, v := range projectConfig.Env {
+		project.Env[k] = v
+	}
+
+	// Atualizar dependências
+	project.Dependencies = make([]domain.Dependency, 0, len(projectConfig.Dependencies))
+	for _, dep := range projectConfig.Dependencies {
+		project.Dependencies = append(project.Dependencies, domain.Dependency{
+			Name:            dep.Name,
+			Version:         "",
+			RequiredVersion: dep.Version,
+			Managed:         dep.Managed,
+			Satisfied:       false,
+		})
+	}
+
+	// Atualizar informações Git
+	if a.gitManager != nil {
+		if gitInfo, err := a.gitManager.GetGitInfo(a.ctx, projectConfig.Path); err != nil {
+			a.logger.Debug("Erro ao obter informações Git para projeto atualizado", map[string]interface{}{
+				"project": projectConfig.Name,
+				"path":    projectConfig.Path,
+				"error":   err.Error(),
+			})
+		} else {
+			project.UpdateGitInfo(gitInfo)
+		}
+	}
+}
+
+// StartProjectDependencies inicia as dependências gerenciadas de um projeto
+func (a *App) StartProjectDependencies(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	return a.enhancedDepMgr.StartManagedDependencies(a.ctx, project)
+}
+
+// StopProjectDependencies para as dependências gerenciadas de um projeto
+func (a *App) StopProjectDependencies(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	return a.enhancedDepMgr.StopManagedDependencies(a.ctx, project)
+}
+
+// SyncRepository sincroniza um repositório (git pull/fetch)
+func (a *App) SyncRepository(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	// Buscar configuração do projeto
+	projectConfig := a.config.GetProjectByName(project.Name)
+	if projectConfig == nil || projectConfig.Repository == nil {
+		return fmt.Errorf("projeto não possui configuração de repositório")
+	}
+
+	a.logger.Info("Sincronizando repositório", map[string]interface{}{
+		"project": project.Name,
+		"path":    project.Path,
+	})
+
+	return a.gitManager.CloneOrUpdate(
+		a.ctx,
+		projectConfig.Repository.URL,
+		project.Path,
+		projectConfig.Repository.Branch,
+	)
+}
+
+// GetProjectGitInfo obtém informações Git de um projeto
+func (a *App) GetProjectGitInfo(id string) (*domain.GitInfo, error) {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	return a.gitManager.GetGitInfo(a.ctx, project.Path)
+}
+
+// CheckoutProjectBranch faz checkout para uma branch específica em um projeto
+func (a *App) CheckoutProjectBranch(id, branch string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	a.logger.Info("Fazendo checkout da branch", map[string]interface{}{
+		"project": project.Name,
+		"branch":  branch,
+		"path":    project.Path,
+	})
+
+	err = a.gitManager.CheckoutBranch(a.ctx, project.Path, branch)
+	if err != nil {
+		return err
+	}
+
+	// Atualizar informações Git do projeto
+	gitInfo, err := a.gitManager.GetGitInfo(a.ctx, project.Path)
+	if err != nil {
+		a.logger.Warn("Erro ao atualizar informações Git após checkout", map[string]interface{}{
+			"error": err.Error(),
+		})
+	} else {
+		project.UpdateGitInfo(gitInfo)
+		if err := a.projectRepo.Update(project); err != nil {
+			a.logger.Warn("Erro ao salvar informações Git atualizadas", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	return nil
+}
+
+// SyncProjectBranch sincroniza a branch atual de um projeto (git pull)
+func (a *App) SyncProjectBranch(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	a.logger.Info("Sincronizando branch do projeto", map[string]interface{}{
+		"project": project.Name,
+		"path":    project.Path,
+	})
+
+	err = a.gitManager.SyncBranch(a.ctx, project.Path)
+	if err != nil {
+		return err
+	}
+
+	// Atualizar informações Git do projeto
+	gitInfo, err := a.gitManager.GetGitInfo(a.ctx, project.Path)
+	if err != nil {
+		a.logger.Warn("Erro ao atualizar informações Git após sync", map[string]interface{}{
+			"error": err.Error(),
+		})
+	} else {
+		project.UpdateGitInfo(gitInfo)
+		if err := a.projectRepo.Update(project); err != nil {
+			a.logger.Warn("Erro ao salvar informações Git atualizadas", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	return nil
+}
+
+// RefreshProjectGitInfo atualiza as informações Git de um projeto
+func (a *App) RefreshProjectGitInfo(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	gitInfo, err := a.gitManager.GetGitInfo(a.ctx, project.Path)
+	if err != nil {
+		return fmt.Errorf("erro ao obter informações Git: %w", err)
+	}
+
+	project.UpdateGitInfo(gitInfo)
+	return a.projectRepo.Update(project)
 }

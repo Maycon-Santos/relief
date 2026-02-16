@@ -37,7 +37,7 @@ Manage multiple projects simultaneously with support for Node.js, Python, Docker
 
 ```bash
 # Clone the repository
-git clone https://github.com/omelete/relief.git
+git clone https://github.com/your-org/relief.git
 cd relief
 
 # Install dependencies
@@ -277,7 +277,7 @@ Contributions are very welcome! Please read the [Contributing Guide](docs/contri
 
 ## 🐛 Issues & Bugs
 
-Found a bug? [Open an issue](https://github.com/omelete/relief/issues/new)
+Found a bug? [Open an issue](https://github.com/your-org/relief/issues/new)
 
 ---
 
@@ -292,19 +292,19 @@ This project is licensed under the [MIT License](LICENSE).
 - [Wails](https://wails.io) - Go + Web GUI framework
 - [Traefik](https://traefik.io) - Modern reverse proxy
 - [React](https://reactjs.org) - UI library
-- All [contributors](https://github.com/omelete/relief/graphs/contributors)
+- All [contributors](https://github.com/your-org/relief/graphs/contributors)
 
 ---
 
 ## 📞 Contact
 
-- **Email:** dev@omelete.com
-- **Issues:** [GitHub Issues](https://github.com/omelete/relief/issues)
+- **Email:** dev@example.com
+- **Issues:** [GitHub Issues](https://github.com/your-org/relief/issues)
 
 ---
 
 <p align="center">
-  Made with ❤️ by the Omelete team
+  Made with ❤️ by the Relief community
 </p>
 
 <p align="center">

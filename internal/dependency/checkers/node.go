@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/omelete/relief/pkg/fileutil"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/pkg/fileutil"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 // NodeChecker verifies and installs Node.js

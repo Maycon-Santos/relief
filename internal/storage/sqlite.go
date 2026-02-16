@@ -9,8 +9,8 @@ import (
 	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/omelete/relief/pkg/fileutil"
-	"github.com/omelete/relief/pkg/logger"
+	"github.com/relief-org/relief/pkg/fileutil"
+	"github.com/relief-org/relief/pkg/logger"
 )
 
 //go:embed migrations/*.sql

@@ -6,7 +6,7 @@ Thank you for considering contributing to **Relief Orchestrator**! 🎉
 
 ### 🐛 Reporting Bugs
 
-Found a bug? Please [open an issue](https://github.com/omelete/relief/issues/new) with:
+Found a bug? Please [open an issue](https://github.com/your-org/relief/issues/new) with:
 - Clear description of the problem
 - Steps to reproduce
 - Expected vs actual behavior
@@ -15,7 +15,7 @@ Found a bug? Please [open an issue](https://github.com/omelete/relief/issues/new
 
 ### 💡 Suggesting Features
 
-Have an idea? [Open an issue](https://github.com/omelete/relief/issues/new) with:
+Have an idea? [Open an issue](https://github.com/your-org/relief/issues/new) with:
 - Clear description of the feature
 - Use case / problem it solves
 - Examples or mockups (if applicable)
@@ -24,7 +24,7 @@ Have an idea? [Open an issue](https://github.com/omelete/relief/issues/new) with
 
 ```bash
 # Clone the repository
-git clone https://github.com/omelete/relief.git
+git clone https://github.com/your-org/relief.git
 cd relief
 
 # Install dependencies
@@ -266,7 +266,7 @@ All PRs require:
 
 ## Questions?
 
-- Open an [Issue](https://github.com/omelete/relief/issues) with `question` tag
+- Open an [Issue](https://github.com/your-org/relief/issues) with `question` tag
 - Join discussions on GitHub
 
 ## Code of Conduct

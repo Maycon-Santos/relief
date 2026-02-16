@@ -45,6 +45,18 @@ type Project struct {
 	CreatedAt    string            `json:"created_at"` // RFC3339 format
 	UpdatedAt    string            `json:"updated_at"` // RFC3339 format
 	LastError    string            `json:"last_error,omitempty"`
+	// Git-related fields
+	GitInfo *GitInfo `json:"git_info,omitempty"`
+}
+
+// GitInfo contém informações sobre o repositório Git do projeto
+type GitInfo struct {
+	IsRepository      bool     `json:"is_repository"`
+	CurrentBranch     string   `json:"current_branch,omitempty"`
+	AvailableBranches []string `json:"available_branches,omitempty"`
+	RemoteURL         string   `json:"remote_url,omitempty"`
+	HasChanges        bool     `json:"has_changes,omitempty"`
+	LastCommit        string   `json:"last_commit,omitempty"`
 }
 
 // Dependency represents a dependency of a project
@@ -137,6 +149,25 @@ func (p *Project) GetUnsatisfiedDependencies() []Dependency {
 		}
 	}
 	return unsatisfied
+}
+
+// UpdateGitInfo updates git-related information for the project
+func (p *Project) UpdateGitInfo(gitInfo *GitInfo) {
+	p.GitInfo = gitInfo
+	p.UpdatedAt = time.Now().Format(time.RFC3339)
+}
+
+// HasGitRepository checks if the project has Git repository
+func (p *Project) HasGitRepository() bool {
+	return p.GitInfo != nil && p.GitInfo.IsRepository
+}
+
+// GetCurrentBranch returns the current git branch
+func (p *Project) GetCurrentBranch() string {
+	if p.GitInfo != nil {
+		return p.GitInfo.CurrentBranch
+	}
+	return ""
 }
 
 // generateID generates a unique ID for the project
