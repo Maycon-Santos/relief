@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "biome check --config-path=.. .",
+    "lint:fix": "biome check --config-path=.. --write .",
+    "format": "biome format --config-path=.. --write ."
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -21,6 +24,7 @@
     "tailwind-merge": "^3.4.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.1",
     "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^25.2.3",
     "@types/react": "^18.2.48",

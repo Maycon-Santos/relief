@@ -1,4 +1,3 @@
-// Package proxy gerencia proxy reverso e configuração de rede.
 package proxy
 
 import (
@@ -13,13 +12,11 @@ import (
 	"github.com/relief-org/relief/pkg/logger"
 )
 
-// HostsManager gerencia entradas no arquivo /etc/hosts
 type HostsManager struct {
 	hostsPath string
 	logger    *logger.Logger
 }
 
-// NewHostsManager cria uma nova instância de HostsManager
 func NewHostsManager(log *logger.Logger) *HostsManager {
 	hostsPath := getHostsPath()
 	return &HostsManager{
@@ -28,13 +25,11 @@ func NewHostsManager(log *logger.Logger) *HostsManager {
 	}
 }
 
-// AddEntry adiciona uma entrada ao arquivo hosts
 func (h *HostsManager) AddEntry(domain string) error {
 	h.logger.Info("Adicionando entrada ao hosts", map[string]interface{}{
 		"domain": domain,
 	})
 
-	// Verificar se já existe
 	exists, err := h.HasEntry(domain)
 	if err != nil {
 		return fmt.Errorf("erro ao verificar entrada existente: %w", err)
@@ -47,28 +42,21 @@ func (h *HostsManager) AddEntry(domain string) error {
 		return nil
 	}
 
-	// Ler arquivo atual
 	content, err := os.ReadFile(h.hostsPath)
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo hosts: %w", err)
 	}
 
-	// Add new entry
 	newEntry := fmt.Sprintf("127.0.0.1 %s # RELIEF\n", domain)
 
-	// Look for RELIEF block
 	contentStr := string(content)
 	if strings.Contains(contentStr, "# BEGIN RELIEF") {
-		// Add before END marker
 		contentStr = strings.Replace(contentStr, "# END RELIEF", newEntry+"# END RELIEF", 1)
 	} else {
-		// Create new block
 		contentStr += "\n# BEGIN RELIEF\n" + newEntry + "# END RELIEF\n"
 	}
 
-	// Escrever de volta
 	if err := os.WriteFile(h.hostsPath, []byte(contentStr), 0644); err != nil {
-		// Se falhar, tentar com sudo
 		h.logger.Warn("Sem permissão para escrever em /etc/hosts, tentando com sudo...", nil)
 		if err := h.writeWithSudo(contentStr); err != nil {
 			return fmt.Errorf("erro ao escrever arquivo hosts: %w", err)
@@ -82,34 +70,28 @@ func (h *HostsManager) AddEntry(domain string) error {
 	return nil
 }
 
-// RemoveEntry remove uma entrada do arquivo hosts
 func (h *HostsManager) RemoveEntry(domain string) error {
 	h.logger.Info("Removendo entrada do hosts", map[string]interface{}{
 		"domain": domain,
 	})
 
-	// Ler arquivo atual
 	content, err := os.ReadFile(h.hostsPath)
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo hosts: %w", err)
 	}
 
-	// Remover linha com o domínio
 	lines := strings.Split(string(content), "\n")
 	newLines := []string{}
 
 	for _, line := range lines {
-		// Skip lines containing domain with RELIEF marker
 		if strings.Contains(line, domain) && strings.Contains(line, "# RELIEF") {
 			continue
 		}
 		newLines = append(newLines, line)
 	}
 
-	// Escrever de volta
 	newContent := strings.Join(newLines, "\n")
 	if err := os.WriteFile(h.hostsPath, []byte(newContent), 0644); err != nil {
-		// Se falhar, tentar com sudo
 		h.logger.Warn("Sem permissão para escrever em /etc/hosts, tentando com sudo...", nil)
 		if err := h.writeWithSudo(newContent); err != nil {
 			return fmt.Errorf("erro ao escrever arquivo hosts: %w", err)
@@ -123,7 +105,6 @@ func (h *HostsManager) RemoveEntry(domain string) error {
 	return nil
 }
 
-// HasEntry verifica se uma entrada existe no hosts
 func (h *HostsManager) HasEntry(domain string) (bool, error) {
 	content, err := os.ReadFile(h.hostsPath)
 	if err != nil {
@@ -140,7 +121,6 @@ func (h *HostsManager) HasEntry(domain string) (bool, error) {
 	return false, nil
 }
 
-// ListEntries returns all Relief entries
 func (h *HostsManager) ListEntries() ([]string, error) {
 	content, err := os.ReadFile(h.hostsPath)
 	if err != nil {
@@ -152,7 +132,6 @@ func (h *HostsManager) ListEntries() ([]string, error) {
 
 	for _, line := range lines {
 		if strings.Contains(line, "# RELIEF") {
-			// Extrair domínio
 			parts := strings.Fields(line)
 			if len(parts) >= 2 {
 				entries = append(entries, parts[1])
@@ -163,17 +142,14 @@ func (h *HostsManager) ListEntries() ([]string, error) {
 	return entries, nil
 }
 
-// CleanupAll removes all Relief entries
 func (h *HostsManager) CleanupAll() error {
 	h.logger.Info("Limpando todas as entradas do hosts", nil)
 
-	// Ler arquivo atual
 	content, err := os.ReadFile(h.hostsPath)
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo hosts: %w", err)
 	}
 
-	// Remove RELIEF block
 	contentStr := string(content)
 	lines := strings.Split(contentStr, "\n")
 	newLines := []string{}
@@ -193,10 +169,8 @@ func (h *HostsManager) CleanupAll() error {
 		}
 	}
 
-	// Escrever de volta
 	newContent := strings.Join(newLines, "\n")
 	if err := os.WriteFile(h.hostsPath, []byte(newContent), 0644); err != nil {
-		// Se falhar, tentar com sudo
 		h.logger.Warn("Sem permissão para escrever em /etc/hosts, tentando com sudo...", nil)
 		if err := h.writeWithSudo(newContent); err != nil {
 			return fmt.Errorf("erro ao escrever arquivo hosts: %w", err)
@@ -207,25 +181,20 @@ func (h *HostsManager) CleanupAll() error {
 	return nil
 }
 
-// RequiresElevation verifica se é necessário privilégios elevados
 func (h *HostsManager) RequiresElevation() bool {
-	// Testar se podemos escrever no arquivo hosts
 	file, err := os.OpenFile(h.hostsPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		return true // Precisa de elevação
+		return true
 	}
 	file.Close()
 	return false
 }
 
-// GetHostsPath retorna o caminho do arquivo hosts
 func (h *HostsManager) GetHostsPath() string {
 	return h.hostsPath
 }
 
-// writeWithSudo escreve o conteúdo no arquivo hosts usando privilégios administrativos
 func (h *HostsManager) writeWithSudo(content string) error {
-	// Criar arquivo temporário com o novo conteúdo
 	reliefDir, err := fileutil.GetReliefDir()
 	if err != nil {
 		return fmt.Errorf("erro ao obter diretório relief: %w", err)
@@ -238,8 +207,7 @@ func (h *HostsManager) writeWithSudo(content string) error {
 	defer os.Remove(tempFile)
 
 	switch runtime.GOOS {
-	case "darwin": // macOS
-		// Usar osascript para pedir senha e executar com privilégios administrativos
+	case "darwin":
 		script := fmt.Sprintf(`do shell script "cat %s > %s" with administrator privileges`, tempFile, h.hostsPath)
 		cmd := exec.Command("osascript", "-e", script)
 
@@ -256,7 +224,6 @@ func (h *HostsManager) writeWithSudo(content string) error {
 		return nil
 
 	case "linux":
-		// No Linux, tentar com pkexec (GUI) ou sudo
 		if _, err := exec.LookPath("pkexec"); err == nil {
 			cmd := exec.Command("pkexec", "cp", tempFile, h.hostsPath)
 			if output, err := cmd.CombinedOutput(); err != nil {
@@ -268,11 +235,9 @@ func (h *HostsManager) writeWithSudo(content string) error {
 			return nil
 		}
 
-		// Fallback: sudo no terminal
 		return fmt.Errorf("permissão negada. Execute manualmente: sudo cp %s %s", tempFile, h.hostsPath)
 
 	case "windows":
-		// No Windows precisaria de UAC elevation - não implementado
 		return fmt.Errorf("elevação de privilégios no Windows não implementada. Execute como administrador")
 
 	default:
@@ -280,7 +245,6 @@ func (h *HostsManager) writeWithSudo(content string) error {
 	}
 }
 
-// getHostsPath retorna o caminho do arquivo hosts baseado no SO
 func getHostsPath() string {
 	switch runtime.GOOS {
 	case "windows":

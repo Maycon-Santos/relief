@@ -1,4 +1,3 @@
-// Package runner fornece a interface e implementações para executar projetos.
 package runner
 
 import (
@@ -8,19 +7,16 @@ import (
 	"github.com/relief-org/relief/pkg/logger"
 )
 
-// Factory cria runners baseado no tipo de projeto
 type Factory struct {
 	logger *logger.Logger
 }
 
-// NewFactory cria uma nova instância de Factory
 func NewFactory(log *logger.Logger) *Factory {
 	return &Factory{
 		logger: log,
 	}
 }
 
-// CreateRunner cria um runner apropriado para o projeto
 func (f *Factory) CreateRunner(project *domain.Project) (ProjectRunner, error) {
 	switch project.Type {
 	case domain.ProjectTypeDocker:
@@ -38,7 +34,6 @@ func (f *Factory) CreateRunner(project *domain.Project) (ProjectRunner, error) {
 	}
 }
 
-// GetAllRunners retorna todos os runners disponíveis
 func (f *Factory) GetAllRunners() map[string]ProjectRunner {
 	return map[string]ProjectRunner{
 		"docker": NewDockerRunner(f.logger),

@@ -1,4 +1,3 @@
-// Package dependency manages dependency verification and installation.
 package dependency
 
 import (
@@ -13,32 +12,25 @@ import (
 	"github.com/relief-org/relief/pkg/logger"
 )
 
-// Manager manages dependency verification and installation
 type Manager struct {
 	checkers map[string]Checker
 	logger   *logger.Logger
 }
 
-// Checker defines the interface for dependency checkers
 type Checker interface {
-	// Check verifies if the dependency is installed and returns the version
 	Check(ctx context.Context) (string, error)
 
-	// Install installs the dependency
 	Install(ctx context.Context, version string) error
 
-	// GetPath returns the path of the dependency binary
 	GetPath() string
 }
 
-// NewManager creates a new Manager instance
 func NewManager(log *logger.Logger) *Manager {
 	m := &Manager{
 		checkers: make(map[string]Checker),
 		logger:   log,
 	}
 
-	// Register checkers
 	m.checkers["node"] = checkers.NewNodeChecker(log)
 	m.checkers["python"] = checkers.NewPythonChecker(log)
 	m.checkers["postgres"] = checkers.NewPostgresChecker(log)
@@ -46,7 +38,6 @@ func NewManager(log *logger.Logger) *Manager {
 	return m
 }
 
-// CheckDependencies verifies all dependencies of a project
 func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project) error {
 	m.logger.Info("Verificando dependências", map[string]interface{}{
 		"project": project.Name,
@@ -75,19 +66,15 @@ func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project
 	return nil
 }
 
-// checkDependency verifies a specific dependency
 func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) error {
 	checker, exists := m.checkers[dep.Name]
 	if !exists {
-		// If there's no specific checker, try to verify via command
 		return m.checkGenericCommand(ctx, dep)
 	}
 
-	// Verify installed version
 	installedVersion, err := checker.Check(ctx)
 	if err != nil {
 		if dep.Managed {
-			// Try to install
 			m.logger.Info("Trying to install dependency", map[string]interface{}{
 				"dependency": dep.Name,
 				"version":    dep.RequiredVersion,
@@ -97,7 +84,6 @@ func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) e
 				return fmt.Errorf("error installing: %w", err)
 			}
 
-			// Verify again
 			installedVersion, err = checker.Check(ctx)
 			if err != nil {
 				return fmt.Errorf("dependency not found after installation: %w", err)
@@ -107,7 +93,6 @@ func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) e
 		}
 	}
 
-	// Validate version
 	if err := m.validateVersion(installedVersion, dep.RequiredVersion); err != nil {
 		return err
 	}
@@ -116,13 +101,10 @@ func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) e
 	return nil
 }
 
-// validateVersion validates if the installed version satisfies the requirement
 func (m *Manager) validateVersion(installed, required string) error {
-	// Clean common prefixes
 	installed = strings.TrimPrefix(installed, "v")
 	required = strings.TrimPrefix(required, "v")
 
-	// Remove operators from required
 	operator := ""
 	if strings.HasPrefix(required, ">=") {
 		operator = ">="
@@ -141,16 +123,13 @@ func (m *Manager) validateVersion(installed, required string) error {
 		required = strings.TrimPrefix(required, "=")
 	}
 
-	// Remove spaces
 	installed = strings.TrimSpace(installed)
 	required = strings.TrimSpace(required)
 
-	// If there's no operator and versions are equal, OK
 	if operator == "" && installed == required {
 		return nil
 	}
 
-	// Parse versions
 	vInstalled, err := version.NewVersion(installed)
 	if err != nil {
 		return fmt.Errorf("error parsing installed version: %w", err)
@@ -161,7 +140,6 @@ func (m *Manager) validateVersion(installed, required string) error {
 		return fmt.Errorf("error parsing required version: %w", err)
 	}
 
-	// Compare
 	switch operator {
 	case ">=":
 		if vInstalled.LessThan(vRequired) {
@@ -188,16 +166,13 @@ func (m *Manager) validateVersion(installed, required string) error {
 	return nil
 }
 
-// checkGenericCommand verifies a generic dependency via command
 func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependency) error {
-	// Try to execute <name> --version
 	cmd := exec.CommandContext(ctx, dep.Name, "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("command not found")
 	}
 
-	// Extract version from output (simple heuristic)
 	version := strings.TrimSpace(string(output))
 	lines := strings.Split(version, "\n")
 	if len(lines) > 0 {
@@ -215,7 +190,6 @@ func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependenc
 	return nil
 }
 
-// InstallDependency installs a specific dependency
 func (m *Manager) InstallDependency(ctx context.Context, name, version string) error {
 	checker, exists := m.checkers[name]
 	if !exists {
@@ -239,7 +213,6 @@ func (m *Manager) InstallDependency(ctx context.Context, name, version string) e
 	return nil
 }
 
-// GetDependencyPath returns the path of an installed dependency
 func (m *Manager) GetDependencyPath(name string) (string, error) {
 	checker, exists := m.checkers[name]
 	if !exists {

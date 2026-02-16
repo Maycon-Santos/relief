@@ -17,8 +17,7 @@ export function DependencyAlert({ dependencies }: DependencyAlertProps) {
 				<ul className="mt-2 space-y-1 list-disc list-inside">
 					{dependencies.map((dep) => (
 						<li key={`${dep.name}-${dep.required_version}`} className="text-xs">
-							<strong>{dep.name}</strong>:{" "}
-							{dep.message || `Required: ${dep.required_version}`}
+							<strong>{dep.name}</strong>: {dep.message || `Required: ${dep.required_version}`}
 						</li>
 					))}
 				</ul>

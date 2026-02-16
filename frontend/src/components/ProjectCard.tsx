@@ -1,25 +1,12 @@
-import {
-	AlertCircle,
-	ExternalLink,
-	FileText,
-	Play,
-	RotateCw,
-	Square,
-	Trash2,
-} from "lucide-react";
+import { AlertCircle, ExternalLink, FileText, Play, RotateCw, Square, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardFooter,
-	CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
 import { api, type PortConflict } from "../services/wails";
-import type { Project } from "../types/project";
+import type { GitInfo, Project } from "../types/project";
 import { DependencyAlert } from "./DependencyAlert";
 import { GitControls } from "./GitControls";
 import { PortConflictModal } from "./PortConflictModal";
@@ -45,30 +32,25 @@ export function ProjectCard({
 	const [error, setError] = useState<string | null>(null);
 	const [portConflict, setPortConflict] = useState<PortConflict | null>(null);
 
-	const handleGitInfoUpdate = (gitInfo: any) => {
-		// Callback para quando as informações Git são atualizadas
+	const handleGitInfoUpdate = (gitInfo: GitInfo) => {
 		console.log("Git info updated:", gitInfo);
 	};
 
-	const handleAction = async (
-		action: () => Promise<void>,
-		actionName: string,
-	) => {
+	const handleAction = async (action: () => Promise<void>, actionName: string) => {
 		try {
 			setLoading(true);
 			setError(null);
 			await action();
 		} catch (err) {
-			const errorMsg =
-				err instanceof Error ? err.message : `Error on ${actionName}`;
+			const errorMsg = err instanceof Error ? err.message : `Error on ${actionName}`;
 
-			// Detectar erro de porta em uso
+
 			if (errorMsg.startsWith("PORT_IN_USE:")) {
 				const parts = errorMsg.split(":");
 				if (parts.length >= 4) {
 					setPortConflict({
-						port: parseInt(parts[1]),
-						pid: parseInt(parts[2]),
+						port: parseInt(parts[1], 10),
+						pid: parseInt(parts[2], 10),
 						command: parts.slice(3).join(":"),
 					});
 				}
@@ -82,15 +64,9 @@ export function ProjectCard({
 
 	const handleKillProcess = async () => {
 		if (!portConflict) return;
-
-		try {
-			await api.killProcessByPID(portConflict.pid);
-			setPortConflict(null);
-			// Tentar iniciar novamente
-			await handleAction(onStart, "start");
-		} catch (err) {
-			throw err;
-		}
+		await api.killProcessByPID(portConflict.pid);
+		setPortConflict(null);
+		await handleAction(onStart, "start");
 	};
 
 	const unsatisfiedDeps = project.dependencies.filter((d) => !d.satisfied);
@@ -99,11 +75,7 @@ export function ProjectCard({
 
 	const getStatusBadge = () => {
 		if (isRunning) {
-			return (
-				<Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-					Running
-				</Badge>
-			);
+			return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Running</Badge>;
 		}
 		return (
 			<Badge variant="secondary" className="text-gray-400 bg-zinc-800/50">
@@ -117,9 +89,7 @@ export function ProjectCard({
 			<CardHeader className="pb-4">
 				<div className="flex items-start justify-between gap-3">
 					<div className="flex-1 min-w-0">
-						<h3 className="text-xl font-bold mb-2 text-white">
-							{project.name}
-						</h3>
+						<h3 className="text-xl font-bold mb-2 text-white">{project.name}</h3>
 						<p className="text-sm text-gray-400 truncate">{project.path}</p>
 					</div>
 					{getStatusBadge()}
@@ -163,12 +133,9 @@ export function ProjectCard({
 					)}
 				</div>
 
-				{/* Git Controls */}
 				<GitControls project={project} onGitInfoUpdate={handleGitInfoUpdate} />
 
-				{unsatisfiedDeps.length > 0 && (
-					<DependencyAlert dependencies={unsatisfiedDeps} />
-				)}
+				{unsatisfiedDeps.length > 0 && <DependencyAlert dependencies={unsatisfiedDeps} />}
 
 				{error && (
 					<Alert variant="destructive">
@@ -180,16 +147,13 @@ export function ProjectCard({
 				{project.last_error && (
 					<Alert variant="destructive">
 						<AlertCircle className="h-4 w-4" />
-						<AlertDescription className="text-xs">
-							{project.last_error}
-						</AlertDescription>
+						<AlertDescription className="text-xs">{project.last_error}</AlertDescription>
 					</Alert>
 				)}
 			</CardContent>
 
 			<CardFooter className="bg-zinc-900/80 border-t border-zinc-800 px-4 py-3">
 				<div className="flex items-center gap-2 w-full flex-wrap">
-					{/* Action Buttons - Left Group */}
 					{isStopped && (
 						<Button
 							onClick={() => handleAction(onStart, "iniciar")}
@@ -239,7 +203,6 @@ export function ProjectCard({
 						</>
 					)}
 
-					{/* Remove Button - Far Right */}
 					<Button
 						onClick={() => handleAction(onRemove, "remover")}
 						disabled={loading || isRunning}

@@ -1,4 +1,3 @@
-// Package domain contains the business entities of the application.
 package domain
 
 import (
@@ -10,7 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Manifest represents the relief.yaml file of a project
 type Manifest struct {
 	Name         string                 `yaml:"name"`
 	Domain       string                 `yaml:"domain"`
@@ -24,35 +22,29 @@ type Manifest struct {
 	Extra        map[string]interface{} `yaml:",inline"`
 }
 
-// ManifestDependency represents a dependency in the manifest
 type ManifestDependency struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
 	Managed bool   `yaml:"managed"`
 }
 
-// ParseManifest reads and parses the relief.yaml file
 func ParseManifest(projectPath string) (*Manifest, error) {
 	manifestPath := filepath.Join(projectPath, "relief.yaml")
 
-	// Check if file exists
 	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("relief.yaml not found. Please create a relief.yaml file in the project directory")
 	}
 
-	// Read file
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading relief.yaml: %w", err)
 	}
 
-	// Parse YAML
 	var manifest Manifest
 	if err := yaml.Unmarshal(data, &manifest); err != nil {
 		return nil, fmt.Errorf("invalid YAML format in relief.yaml: %w", err)
 	}
 
-	// Basic validation
 	if err := manifest.Validate(); err != nil {
 		return nil, err
 	}
@@ -60,7 +52,6 @@ func ParseManifest(projectPath string) (*Manifest, error) {
 	return &manifest, nil
 }
 
-// Validate validates the manifest
 func (m *Manifest) Validate() error {
 	if m.Name == "" {
 		return fmt.Errorf("'name' field is required")
@@ -69,7 +60,6 @@ func (m *Manifest) Validate() error {
 		return fmt.Errorf("'type' field is required")
 	}
 
-	// Validate type
 	validTypes := map[string]bool{
 		"docker": true,
 		"node":   true,
@@ -85,7 +75,6 @@ func (m *Manifest) Validate() error {
 	return nil
 }
 
-// GetDevScript returns the development script
 func (m *Manifest) GetDevScript() string {
 	if script, ok := m.Scripts["dev"]; ok {
 		return script
@@ -93,7 +82,6 @@ func (m *Manifest) GetDevScript() string {
 	return ""
 }
 
-// GetInstallScript returns the installation script
 func (m *Manifest) GetInstallScript() string {
 	if script, ok := m.Scripts["install"]; ok {
 		return script
@@ -101,7 +89,6 @@ func (m *Manifest) GetInstallScript() string {
 	return ""
 }
 
-// HasDependency checks if the manifest has a specific dependency
 func (m *Manifest) HasDependency(name string) bool {
 	for _, dep := range m.Dependencies {
 		if dep.Name == name {
@@ -111,7 +98,6 @@ func (m *Manifest) HasDependency(name string) bool {
 	return false
 }
 
-// GetDependency returns a specific dependency
 func (m *Manifest) GetDependency(name string) *ManifestDependency {
 	for i := range m.Dependencies {
 		if m.Dependencies[i].Name == name {
@@ -121,7 +107,6 @@ func (m *Manifest) GetDependency(name string) *ManifestDependency {
 	return nil
 }
 
-// ToProject converts the manifest into a Project
 func (m *Manifest) ToProject(path string) *Project {
 	projectType := ProjectType(m.Type)
 	project := NewProject(m.Name, path, m.Domain, projectType)
@@ -130,7 +115,6 @@ func (m *Manifest) ToProject(path string) *Project {
 	project.Env = m.Env
 	project.Manifest = m
 
-	// Extract port from env.PORT or ports.main
 	if portStr, ok := m.Env["PORT"]; ok {
 		if port, err := strconv.Atoi(portStr); err == nil {
 			project.Port = port
@@ -141,20 +125,18 @@ func (m *Manifest) ToProject(path string) *Project {
 		}
 	}
 
-	// Convert dependencies
 	for _, dep := range m.Dependencies {
 		project.Dependencies = append(project.Dependencies, Dependency{
 			Name:            dep.Name,
 			RequiredVersion: dep.Version,
 			Managed:         dep.Managed,
-			Satisfied:       false, // Will be verified later
+			Satisfied:       false,
 		})
 	}
 
 	return project
 }
 
-// SaveManifest saves the manifest to a file
 func (m *Manifest) SaveManifest(projectPath string) error {
 	manifestPath := filepath.Join(projectPath, "relief.yaml")
 
@@ -170,7 +152,6 @@ func (m *Manifest) SaveManifest(projectPath string) error {
 	return nil
 }
 
-// CreateDefaultManifest creates a default manifest for a project
 func CreateDefaultManifest(name, projectType string) *Manifest {
 	manifest := &Manifest{
 		Name:         name,
@@ -181,7 +162,6 @@ func CreateDefaultManifest(name, projectType string) *Manifest {
 		Env:          make(map[string]string),
 	}
 
-	// Default scripts based on type
 	switch projectType {
 	case "node":
 		manifest.Scripts["dev"] = "npm run dev"

@@ -1,4 +1,3 @@
-// Package storage fornece a camada de persistência da aplicação.
 package storage
 
 import (
@@ -10,17 +9,14 @@ import (
 	"github.com/relief-org/relief/internal/domain"
 )
 
-// ProjectRepository gerencia persistência de projetos
 type ProjectRepository struct {
 	db *DB
 }
 
-// NewProjectRepository cria uma nova instância de ProjectRepository
 func NewProjectRepository(db *DB) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }
 
-// Create cria um novo projeto no banco
 func (r *ProjectRepository) Create(project *domain.Project) error {
 	query := `
 		INSERT INTO projects (id, name, path, domain, type, status, port, pid, last_error, created_at, updated_at)
@@ -45,7 +41,6 @@ func (r *ProjectRepository) Create(project *domain.Project) error {
 		return fmt.Errorf("erro ao criar projeto: %w", err)
 	}
 
-	// Salvar dependências
 	if err := r.saveDependencies(project); err != nil {
 		return fmt.Errorf("erro ao salvar dependências: %w", err)
 	}
@@ -53,7 +48,6 @@ func (r *ProjectRepository) Create(project *domain.Project) error {
 	return nil
 }
 
-// Update atualiza um projeto existente
 func (r *ProjectRepository) Update(project *domain.Project) error {
 	query := `
 		UPDATE projects 
@@ -84,7 +78,6 @@ func (r *ProjectRepository) Update(project *domain.Project) error {
 		return fmt.Errorf("projeto não encontrado")
 	}
 
-	// Atualizar dependências
 	if err := r.saveDependencies(project); err != nil {
 		return fmt.Errorf("erro ao atualizar dependências: %w", err)
 	}
@@ -92,7 +85,6 @@ func (r *ProjectRepository) Update(project *domain.Project) error {
 	return nil
 }
 
-// Delete remove um projeto
 func (r *ProjectRepository) Delete(id string) error {
 	query := `DELETE FROM projects WHERE id = ?`
 
@@ -109,7 +101,6 @@ func (r *ProjectRepository) Delete(id string) error {
 	return nil
 }
 
-// GetByID retorna um projeto por ID
 func (r *ProjectRepository) GetByID(id string) (*domain.Project, error) {
 	query := `
 		SELECT id, name, path, domain, type, status, port, pid, last_error, created_at, updated_at
@@ -138,7 +129,6 @@ func (r *ProjectRepository) GetByID(id string) (*domain.Project, error) {
 		return nil, fmt.Errorf("erro ao buscar projeto: %w", err)
 	}
 
-	// Inicializar maps se necessário
 	if project.Scripts == nil {
 		project.Scripts = make(map[string]string)
 	}
@@ -149,15 +139,12 @@ func (r *ProjectRepository) GetByID(id string) (*domain.Project, error) {
 		project.Dependencies = []domain.Dependency{}
 	}
 
-	// Carregar dependências
 	if err := r.loadDependencies(&project); err != nil {
 		return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
 	}
 
-	// Carregar manifest do arquivo relief.yaml
 	if manifest, err := domain.ParseManifest(project.Path); err == nil {
 		project.Manifest = manifest
-		// Atualizar porta se estiver configurada no manifest
 		if portStr, ok := manifest.Env["PORT"]; ok {
 			if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
 				project.Port = port
@@ -172,7 +159,6 @@ func (r *ProjectRepository) GetByID(id string) (*domain.Project, error) {
 	return &project, nil
 }
 
-// GetByName retorna um projeto por nome
 func (r *ProjectRepository) GetByName(name string) (*domain.Project, error) {
 	query := `
 		SELECT id, name, path, domain, type, status, port, pid, last_error, created_at, updated_at
@@ -201,7 +187,6 @@ func (r *ProjectRepository) GetByName(name string) (*domain.Project, error) {
 		return nil, fmt.Errorf("erro ao buscar projeto: %w", err)
 	}
 
-	// Inicializar maps se necessário
 	if project.Scripts == nil {
 		project.Scripts = make(map[string]string)
 	}
@@ -212,15 +197,12 @@ func (r *ProjectRepository) GetByName(name string) (*domain.Project, error) {
 		project.Dependencies = []domain.Dependency{}
 	}
 
-	// Carregar dependências
 	if err := r.loadDependencies(&project); err != nil {
 		return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
 	}
 
-	// Carregar manifest do arquivo relief.yaml
 	if manifest, err := domain.ParseManifest(project.Path); err == nil {
 		project.Manifest = manifest
-		// Atualizar porta se estiver configurada no manifest
 		if portStr, ok := manifest.Env["PORT"]; ok {
 			if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
 				project.Port = port
@@ -235,7 +217,6 @@ func (r *ProjectRepository) GetByName(name string) (*domain.Project, error) {
 	return &project, nil
 }
 
-// List retorna todos os projetos
 func (r *ProjectRepository) List() ([]*domain.Project, error) {
 	query := `
 		SELECT id, name, path, domain, type, status, port, pid, last_error, created_at, updated_at
@@ -269,7 +250,6 @@ func (r *ProjectRepository) List() ([]*domain.Project, error) {
 			return nil, fmt.Errorf("erro ao scanear projeto: %w", err)
 		}
 
-		// Inicializar maps se necessário
 		if project.Scripts == nil {
 			project.Scripts = make(map[string]string)
 		}
@@ -280,15 +260,12 @@ func (r *ProjectRepository) List() ([]*domain.Project, error) {
 			project.Dependencies = []domain.Dependency{}
 		}
 
-		// Carregar dependências
 		if err := r.loadDependencies(&project); err != nil {
 			return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
 		}
 
-		// Carregar manifest do arquivo relief.yaml
 		if manifest, err := domain.ParseManifest(project.Path); err == nil {
 			project.Manifest = manifest
-			// Atualizar porta se estiver configurada no manifest
 			if portStr, ok := manifest.Env["PORT"]; ok {
 				if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
 					project.Port = port
@@ -306,15 +283,12 @@ func (r *ProjectRepository) List() ([]*domain.Project, error) {
 	return projects, nil
 }
 
-// saveDependencies salva as dependências de um projeto
 func (r *ProjectRepository) saveDependencies(project *domain.Project) error {
-	// Deletar dependências existentes
 	deleteQuery := `DELETE FROM dependencies WHERE project_id = ?`
 	if _, err := r.db.conn.Exec(deleteQuery, project.ID); err != nil {
 		return err
 	}
 
-	// Inserir novas dependências
 	insertQuery := `
 		INSERT INTO dependencies (project_id, name, version, required_version, managed, satisfied, message)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -338,7 +312,6 @@ func (r *ProjectRepository) saveDependencies(project *domain.Project) error {
 	return nil
 }
 
-// loadDependencies carrega as dependências de um projeto
 func (r *ProjectRepository) loadDependencies(project *domain.Project) error {
 	query := `
 		SELECT name, version, required_version, managed, satisfied, message
@@ -371,17 +344,14 @@ func (r *ProjectRepository) loadDependencies(project *domain.Project) error {
 	return nil
 }
 
-// LogRepository gerencia persistência de logs
 type LogRepository struct {
 	db *DB
 }
 
-// NewLogRepository cria uma nova instância de LogRepository
 func NewLogRepository(db *DB) *LogRepository {
 	return &LogRepository{db: db}
 }
 
-// Create cria uma nova entrada de log
 func (r *LogRepository) Create(log *domain.LogEntry) error {
 	query := `INSERT INTO logs (project_id, level, message, timestamp) VALUES (?, ?, ?, ?)`
 
@@ -396,7 +366,6 @@ func (r *LogRepository) Create(log *domain.LogEntry) error {
 	return nil
 }
 
-// GetByProjectID retorna logs de um projeto
 func (r *LogRepository) GetByProjectID(projectID string, limit int) ([]domain.LogEntry, error) {
 	query := `
 		SELECT id, project_id, level, message, timestamp
@@ -421,7 +390,6 @@ func (r *LogRepository) GetByProjectID(projectID string, limit int) ([]domain.Lo
 		logs = append(logs, log)
 	}
 
-	// Inverter ordem (mais antigos primeiro)
 	for i := len(logs)/2 - 1; i >= 0; i-- {
 		opp := len(logs) - 1 - i
 		logs[i], logs[opp] = logs[opp], logs[i]
@@ -430,7 +398,6 @@ func (r *LogRepository) GetByProjectID(projectID string, limit int) ([]domain.Lo
 	return logs, nil
 }
 
-// DeleteOldLogs remove logs antigos
 func (r *LogRepository) DeleteOldLogs(olderThan time.Time) error {
 	query := `DELETE FROM logs WHERE timestamp < ?`
 	_, err := r.db.conn.Exec(query, olderThan)

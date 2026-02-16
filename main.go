@@ -14,10 +14,8 @@ import (
 var assets embed.FS
 
 func main() {
-	// Create application instance
 	application := app.NewApp()
 
-	// Configure Wails options
 	err := wails.Run(&options.App{
 		Title:  "Relief Orchestrator",
 		Width:  1280,

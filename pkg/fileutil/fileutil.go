@@ -1,4 +1,3 @@
-// Package fileutil provides utilities for filesystem operations.
 package fileutil
 
 import (
@@ -8,13 +7,11 @@ import (
 	"path/filepath"
 )
 
-// Exists checks if a file or directory exists
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// IsDir checks if the path is a directory
 func IsDir(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -23,7 +20,6 @@ func IsDir(path string) bool {
 	return info.IsDir()
 }
 
-// EnsureDir creates a directory if it doesn't exist (including parents)
 func EnsureDir(path string) error {
 	if Exists(path) {
 		return nil
@@ -31,7 +27,6 @@ func EnsureDir(path string) error {
 	return os.MkdirAll(path, 0755)
 }
 
-// CopyFile copies a file from src to dst
 func CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -39,7 +34,6 @@ func CopyFile(src, dst string) error {
 	}
 	defer sourceFile.Close()
 
-	// Create destination directory if it doesn't exist
 	if err := EnsureDir(filepath.Dir(dst)); err != nil {
 		return fmt.Errorf("error creating destination directory: %w", err)
 	}
@@ -54,7 +48,6 @@ func CopyFile(src, dst string) error {
 		return fmt.Errorf("error copying file: %w", err)
 	}
 
-	// Copy permissions
 	sourceInfo, err := os.Stat(src)
 	if err != nil {
 		return fmt.Errorf("error getting source file info: %w", err)
@@ -63,7 +56,6 @@ func CopyFile(src, dst string) error {
 	return os.Chmod(dst, sourceInfo.Mode())
 }
 
-// WriteFile writes content to a file, creating directories if necessary
 func WriteFile(path string, content []byte, perm os.FileMode) error {
 	if err := EnsureDir(filepath.Dir(path)); err != nil {
 		return fmt.Errorf("error creating directory: %w", err)
@@ -71,12 +63,10 @@ func WriteFile(path string, content []byte, perm os.FileMode) error {
 	return os.WriteFile(path, content, perm)
 }
 
-// ReadFile reads the content of a file
 func ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-// GetHomeDir returns the user's home directory
 func GetHomeDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -85,7 +75,6 @@ func GetHomeDir() (string, error) {
 	return home, nil
 }
 
-// GetReliefDir returns the ~/.relief directory
 func GetReliefDir() (string, error) {
 	home, err := GetHomeDir()
 	if err != nil {
@@ -98,7 +87,6 @@ func GetReliefDir() (string, error) {
 	return reliefDir, nil
 }
 
-// GetReliefSubDir returns a subdirectory inside ~/.relief
 func GetReliefSubDir(subdir string) (string, error) {
 	reliefDir, err := GetReliefDir()
 	if err != nil {

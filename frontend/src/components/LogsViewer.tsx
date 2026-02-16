@@ -2,12 +2,7 @@ import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { api } from "../services/wails";
@@ -19,11 +14,7 @@ interface LogsViewerProps {
 	onClose: () => void;
 }
 
-export function LogsViewer({
-	projectId,
-	projectName,
-	onClose,
-}: LogsViewerProps) {
+export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps) {
 	const [logs, setLogs] = useState<LogEntry[]>([]);
 	const [autoScroll, setAutoScroll] = useState(true);
 	const logsEndRef = useRef<HTMLDivElement>(null);
@@ -48,7 +39,7 @@ export function LogsViewer({
 		if (autoScroll) {
 			logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
 		}
-	}, [logs, autoScroll]);
+	}, [autoScroll]);
 
 	const getLevelConfig = (level: string) => {
 		const normalizedLevel = level.toLowerCase();
@@ -91,9 +82,7 @@ export function LogsViewer({
 			<DialogContent className="max-w-5xl h-[80vh] flex flex-col p-0 bg-zinc-950 border-zinc-800">
 				<DialogHeader className="p-6 pb-4 border-b border-zinc-800">
 					<div className="flex items-center justify-between">
-						<DialogTitle className="text-xl font-bold text-white">
-							Logs: {projectName}
-						</DialogTitle>
+						<DialogTitle className="text-xl font-bold text-white">Logs: {projectName}</DialogTitle>
 						<div className="flex items-center gap-3">
 							<label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
 								<input
@@ -119,9 +108,7 @@ export function LogsViewer({
 				<ScrollArea className="flex-1 p-6">
 					<div className="font-mono text-sm space-y-0.5 bg-[#0a1628] rounded-lg p-5 border border-blue-950/50 shadow-inner">
 						{logs.length === 0 ? (
-							<p className="text-gray-500 text-center py-8">
-								Nenhum log disponível
-							</p>
+							<p className="text-gray-500 text-center py-8">Nenhum log disponível</p>
 						) : (
 							logs.map((log) => {
 								const { color, bg, border } = getLevelConfig(log.level);
@@ -146,9 +133,7 @@ export function LogsViewer({
 										>
 											{log.level}
 										</Badge>
-										<span className="flex-1 text-gray-100 leading-relaxed">
-											{log.message}
-										</span>
+										<span className="flex-1 text-gray-100 leading-relaxed">{log.message}</span>
 									</div>
 								);
 							})

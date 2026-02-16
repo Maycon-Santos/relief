@@ -1,4 +1,3 @@
-// Package dependency manages enhanced dependency verification and installation.
 package dependency
 
 import (
@@ -13,7 +12,6 @@ import (
 	"github.com/relief-org/relief/pkg/logger"
 )
 
-// EnhancedManager gerencia dependências com funcionalidades avançadas
 type EnhancedManager struct {
 	logger          *logger.Logger
 	config          *config.Config
@@ -21,7 +19,6 @@ type EnhancedManager struct {
 	healthCheckers  map[string]*time.Ticker
 }
 
-// NewEnhancedManager cria uma nova instância de EnhancedManager
 func NewEnhancedManager(log *logger.Logger, cfg *config.Config) *EnhancedManager {
 	return &EnhancedManager{
 		logger:          log,
@@ -31,14 +28,12 @@ func NewEnhancedManager(log *logger.Logger, cfg *config.Config) *EnhancedManager
 	}
 }
 
-// StartManagedDependencies inicia todas as dependências gerenciadas
 func (m *EnhancedManager) StartManagedDependencies(ctx context.Context, project *domain.Project) error {
 	for _, dep := range project.Dependencies {
 		if !dep.Managed {
 			continue
 		}
 
-		// Verificar se já está executando
 		if m.runningServices[dep.Name] {
 			m.logger.Info("Dependência já está executando", map[string]interface{}{
 				"dependency": dep.Name,
@@ -46,7 +41,6 @@ func (m *EnhancedManager) StartManagedDependencies(ctx context.Context, project 
 			continue
 		}
 
-		// Obter configuração da dependência gerenciada
 		managedDep, exists := m.config.ManagedDependencies[dep.Name]
 		if !exists {
 			m.logger.Warn("Configuração não encontrada para dependência gerenciada", map[string]interface{}{
@@ -55,17 +49,14 @@ func (m *EnhancedManager) StartManagedDependencies(ctx context.Context, project 
 			continue
 		}
 
-		// Verificar se está instalado
 		if err := m.checkAndInstallDependency(ctx, dep.Name, dep.Version, managedDep); err != nil {
 			return fmt.Errorf("erro ao verificar/instalar dependência %s: %w", dep.Name, err)
 		}
 
-		// Iniciar o serviço
 		if err := m.startService(ctx, dep.Name, managedDep); err != nil {
 			return fmt.Errorf("erro ao iniciar serviço %s: %w", dep.Name, err)
 		}
 
-		// Iniciar health check
 		m.startHealthCheck(ctx, dep.Name)
 
 		m.runningServices[dep.Name] = true
@@ -74,7 +65,6 @@ func (m *EnhancedManager) StartManagedDependencies(ctx context.Context, project 
 	return nil
 }
 
-// StopManagedDependencies para todas as dependências gerenciadas
 func (m *EnhancedManager) StopManagedDependencies(ctx context.Context, project *domain.Project) error {
 	for _, dep := range project.Dependencies {
 		if !dep.Managed || !m.runningServices[dep.Name] {
@@ -86,10 +76,8 @@ func (m *EnhancedManager) StopManagedDependencies(ctx context.Context, project *
 			continue
 		}
 
-		// Parar health check
 		m.stopHealthCheck(dep.Name)
 
-		// Parar o serviço
 		if err := m.stopService(ctx, dep.Name, managedDep); err != nil {
 			m.logger.Warn("Erro ao parar serviço", map[string]interface{}{
 				"dependency": dep.Name,
@@ -103,21 +91,17 @@ func (m *EnhancedManager) StopManagedDependencies(ctx context.Context, project *
 	return nil
 }
 
-// checkAndInstallDependency verifica se uma dependência está instalada e a instala se necessário
 func (m *EnhancedManager) checkAndInstallDependency(ctx context.Context, name, version string, managedDep config.ManagedDependency) error {
-	// Verificar se está disponível
 	if err := m.checkDependency(ctx, name); err != nil {
 		m.logger.Info("Dependência não encontrada, instalando...", map[string]interface{}{
 			"dependency": name,
 		})
 
-		// Instalar dependência
 		if err := m.installDependency(ctx, name, managedDep); err != nil {
 			return fmt.Errorf("erro ao instalar dependência: %w", err)
 		}
 	}
 
-	// Verificar se bancos de dados precisam ser inicializados
 	if len(managedDep.InitDatabases) > 0 {
 		if err := m.initializeDatabases(ctx, name, managedDep.InitDatabases); err != nil {
 			return fmt.Errorf("erro ao inicializar bancos de dados: %w", err)
@@ -127,7 +111,6 @@ func (m *EnhancedManager) checkAndInstallDependency(ctx context.Context, name, v
 	return nil
 }
 
-// checkDependency verifica se uma dependência está disponível
 func (m *EnhancedManager) checkDependency(ctx context.Context, name string) error {
 	switch name {
 	case "postgres":
@@ -154,7 +137,6 @@ func (m *EnhancedManager) checkDependency(ctx context.Context, name string) erro
 	return nil
 }
 
-// installDependency instala uma dependência usando o comando especificado
 func (m *EnhancedManager) installDependency(ctx context.Context, name string, managedDep config.ManagedDependency) error {
 	if managedDep.InstallCommand == "" {
 		return fmt.Errorf("comando de instalação não definido para %s", name)
@@ -165,7 +147,6 @@ func (m *EnhancedManager) installDependency(ctx context.Context, name string, ma
 		"command":    managedDep.InstallCommand,
 	})
 
-	// Executar comando de instalação
 	parts := strings.Fields(managedDep.InstallCommand)
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 	output, err := cmd.CombinedOutput()
@@ -180,7 +161,6 @@ func (m *EnhancedManager) installDependency(ctx context.Context, name string, ma
 	return nil
 }
 
-// startService inicia um serviço gerenciado
 func (m *EnhancedManager) startService(ctx context.Context, name string, managedDep config.ManagedDependency) error {
 	if managedDep.StartCommand == "" {
 		return fmt.Errorf("comando de início não definido para %s", name)
@@ -191,11 +171,9 @@ func (m *EnhancedManager) startService(ctx context.Context, name string, managed
 		"command": managedDep.StartCommand,
 	})
 
-	// Executar comando de início
 	parts := strings.Fields(managedDep.StartCommand)
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 
-	// Configurar variáveis de ambiente se especificadas
 	if len(managedDep.Environment) > 0 {
 		env := cmd.Env
 		for key, value := range managedDep.Environment {
@@ -213,13 +191,11 @@ func (m *EnhancedManager) startService(ctx context.Context, name string, managed
 		"service": name,
 	})
 
-	// Aguardar um pouco para o serviço inicializar
 	time.Sleep(2 * time.Second)
 
 	return nil
 }
 
-// stopService para um serviço gerenciado
 func (m *EnhancedManager) stopService(ctx context.Context, name string, managedDep config.ManagedDependency) error {
 	if managedDep.StopCommand == "" {
 		m.logger.Info("Comando de parada não definido", map[string]interface{}{
@@ -233,7 +209,6 @@ func (m *EnhancedManager) stopService(ctx context.Context, name string, managedD
 		"command": managedDep.StopCommand,
 	})
 
-	// Executar comando de parada
 	parts := strings.Fields(managedDep.StopCommand)
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 	output, err := cmd.CombinedOutput()
@@ -248,10 +223,8 @@ func (m *EnhancedManager) stopService(ctx context.Context, name string, managedD
 	return nil
 }
 
-// initializeDatabases inicializa bancos de dados conforme especificado
 func (m *EnhancedManager) initializeDatabases(ctx context.Context, serviceName string, databases []config.DatabaseConfig) error {
 	if serviceName != "postgres" {
-		// Por enquanto só suportamos PostgreSQL
 		return nil
 	}
 
@@ -261,7 +234,6 @@ func (m *EnhancedManager) initializeDatabases(ctx context.Context, serviceName s
 			"owner":    db.Owner,
 		})
 
-		// Comando para criar banco de dados
 		createCmd := fmt.Sprintf("CREATE DATABASE %s;", db.Name)
 		if db.Owner != "" {
 			createCmd = fmt.Sprintf("CREATE DATABASE %s OWNER %s;", db.Name, db.Owner)
@@ -270,7 +242,6 @@ func (m *EnhancedManager) initializeDatabases(ctx context.Context, serviceName s
 		cmd := exec.CommandContext(ctx, "psql", "-U", "postgres", "-c", createCmd)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			// Ignorar se banco já existe
 			if strings.Contains(string(output), "already exists") {
 				m.logger.Info("Banco de dados já existe", map[string]interface{}{
 					"database": db.Name,
@@ -288,14 +259,12 @@ func (m *EnhancedManager) initializeDatabases(ctx context.Context, serviceName s
 	return nil
 }
 
-// startHealthCheck inicia verificação de saúde para um serviço
 func (m *EnhancedManager) startHealthCheck(ctx context.Context, serviceName string) {
 	healthCheck, exists := m.config.HealthChecks[serviceName]
 	if !exists {
 		return
 	}
 
-	// Parse do interval
 	interval, err := time.ParseDuration(healthCheck.Interval)
 	if err != nil {
 		m.logger.Warn("Interval inválido para health check", map[string]interface{}{
@@ -321,7 +290,6 @@ func (m *EnhancedManager) startHealthCheck(ctx context.Context, serviceName stri
 	}()
 }
 
-// stopHealthCheck para verificação de saúde para um serviço
 func (m *EnhancedManager) stopHealthCheck(serviceName string) {
 	if ticker, exists := m.healthCheckers[serviceName]; exists {
 		ticker.Stop()
@@ -329,9 +297,7 @@ func (m *EnhancedManager) stopHealthCheck(serviceName string) {
 	}
 }
 
-// performHealthCheck executa uma verificação de saúde
 func (m *EnhancedManager) performHealthCheck(ctx context.Context, serviceName string, healthCheck config.HealthCheckConfig) {
-	// Parse do timeout
 	timeout, err := time.ParseDuration(healthCheck.Timeout)
 	if err != nil {
 		timeout = 5 * time.Second
@@ -340,7 +306,6 @@ func (m *EnhancedManager) performHealthCheck(ctx context.Context, serviceName st
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Executar comando de health check
 	parts := strings.Fields(healthCheck.Command)
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 

@@ -1,4 +1,3 @@
-// Package httputil provides utilities for HTTP operations.
 package httputil
 
 import (
@@ -9,12 +8,10 @@ import (
 	"time"
 )
 
-// Client is a wrapper around http.Client with default configurations
 type Client struct {
 	client *http.Client
 }
 
-// NewClient creates a new HTTP client with timeout
 func NewClient(timeout time.Duration) *Client {
 	return &Client{
 		client: &http.Client{
@@ -23,12 +20,10 @@ func NewClient(timeout time.Duration) *Client {
 	}
 }
 
-// DefaultClient returns a client with 10 seconds timeout
 func DefaultClient() *Client {
 	return NewClient(10 * time.Second)
 }
 
-// Get performs a GET request
 func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -53,7 +48,6 @@ func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
 	return body, nil
 }
 
-// GetWithHeaders performs a GET request with custom headers
 func (c *Client) GetWithHeaders(ctx context.Context, url string, headers map[string]string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -82,12 +76,10 @@ func (c *Client) GetWithHeaders(ctx context.Context, url string, headers map[str
 	return body, nil
 }
 
-// DownloadFile downloads a file from the URL and returns the bytes
 func (c *Client) DownloadFile(ctx context.Context, url string) ([]byte, error) {
 	return c.Get(ctx, url)
 }
 
-// IsReachable checks if a URL is accessible
 func (c *Client) IsReachable(ctx context.Context, url string) bool {
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {

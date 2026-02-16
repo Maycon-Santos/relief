@@ -1,5 +1,3 @@
-// Wrapper para os bindings Wails
-
 import * as App from "../../wailsjs/go/app/App";
 import type { AppStatus, LogEntry, Project } from "../types/project";
 
@@ -62,8 +60,9 @@ export const api = {
     return await App.KillProcessByPID(pid);
   },
 
-  // Git-related functions
-  async getProjectGitInfo(id: string): Promise<any> {
+  async getProjectGitInfo(
+    id: string,
+  ): Promise<import("../types/project").GitInfo> {
     return await App.GetProjectGitInfo(id);
   },
 

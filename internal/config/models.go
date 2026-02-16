@@ -1,9 +1,7 @@
-// Package config gerencia a configuração da aplicação.
 package config
 
 import "time"
 
-// Config é a estrutura principal de configuração
 type Config struct {
 	Remote              RemoteConfig                 `yaml:"remote"`
 	Projects            []ProjectConfig              `yaml:"projects"`
@@ -15,20 +13,18 @@ type Config struct {
 	HealthChecks        map[string]HealthCheckConfig `yaml:"health_checks"`
 }
 
-// RemoteConfig contém configurações para carregar config remota
 type RemoteConfig struct {
 	URL             string        `yaml:"url"`
 	RefreshInterval time.Duration `yaml:"refresh_interval"`
 	Enabled         bool          `yaml:"enabled"`
 }
 
-// ProjectConfig define a configuração de um projeto
 type ProjectConfig struct {
 	Name         string            `yaml:"name"`
 	Path         string            `yaml:"path"`
 	Repository   *RepositoryConfig `yaml:"repository,omitempty"`
 	Domain       string            `yaml:"domain"`
-	Type         string            `yaml:"type"` // node, python, docker, java
+	Type         string            `yaml:"type"`
 	Dependencies []DependencySpec  `yaml:"dependencies"`
 	Scripts      map[string]string `yaml:"scripts"`
 	Env          map[string]string `yaml:"env"`
@@ -36,22 +32,19 @@ type ProjectConfig struct {
 	AutoStart    bool              `yaml:"auto_start"`
 }
 
-// RepositoryConfig define configuração de repositório Git
 type RepositoryConfig struct {
 	URL       string `yaml:"url"`
 	Branch    string `yaml:"branch"`
 	AutoClone bool   `yaml:"auto_clone"`
 }
 
-// DependencySpec especifica uma dependência de um projeto
 type DependencySpec struct {
 	Name    string                 `yaml:"name"`
 	Version string                 `yaml:"version"`
-	Managed bool                   `yaml:"managed"` // Se o orquestrador deve prover a dependência
+	Managed bool                   `yaml:"managed"`
 	Config  map[string]interface{} `yaml:"config,omitempty"`
 }
 
-// ManagedDependency define configuração para dependências gerenciadas
 type ManagedDependency struct {
 	InstallCommand string            `yaml:"install_command"`
 	StartCommand   string            `yaml:"start_command"`
@@ -62,26 +55,22 @@ type ManagedDependency struct {
 	Environment    map[string]string `yaml:"environment,omitempty"`
 }
 
-// DatabaseConfig define configuração de banco de dados
 type DatabaseConfig struct {
 	Name  string `yaml:"name"`
 	Owner string `yaml:"owner,omitempty"`
 }
 
-// DevelopmentConfig define configurações de desenvolvimento
 type DevelopmentConfig struct {
 	StartupOrder  []string          `yaml:"startup_order"`
 	GlobalScripts map[string]string `yaml:"global_scripts"`
 }
 
-// LoggingConfig define configurações de logging
 type LoggingConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
 	Output string `yaml:"output"`
 }
 
-// HealthCheckConfig define configurações de health check
 type HealthCheckConfig struct {
 	Command  string `yaml:"command"`
 	Interval string `yaml:"interval"`
@@ -89,23 +78,19 @@ type HealthCheckConfig struct {
 	Retries  int    `yaml:"retries"`
 }
 
-// ToolVersion especifica a versão de uma ferramenta
 type ToolVersion struct {
 	Version     string `yaml:"version"`
 	DownloadURL string `yaml:"download_url,omitempty"`
 }
 
-// ProxyConfig contém configurações do proxy (Traefik)
 type ProxyConfig struct {
 	HTTPPort   int  `yaml:"http_port"`
 	HTTPSPort  int  `yaml:"https_port"`
 	Dashboard  bool `yaml:"dashboard"`
-	AutoManage bool `yaml:"auto_manage"` // Gerenciar automaticamente o Traefik
+	AutoManage bool `yaml:"auto_manage"`
 }
 
-// Validate valida a configuração
 func (c *Config) Validate() error {
-	// Validações básicas
 	if c.Proxy.HTTPPort <= 0 {
 		c.Proxy.HTTPPort = 80
 	}
@@ -113,20 +98,18 @@ func (c *Config) Validate() error {
 		c.Proxy.HTTPSPort = 443
 	}
 
-	// Validar projetos
 	for i := range c.Projects {
 		if c.Projects[i].Name == "" {
 			return &ValidationError{Field: "projects[].name", Message: "nome do projeto é obrigatório"}
 		}
 		if c.Projects[i].Type == "" {
-			c.Projects[i].Type = "docker" // Padrão
+			c.Projects[i].Type = "docker"
 		}
 	}
 
 	return nil
 }
 
-// ValidationError representa um erro de validação
 type ValidationError struct {
 	Field   string
 	Message string
@@ -136,7 +119,6 @@ func (e *ValidationError) Error() string {
 	return e.Field + ": " + e.Message
 }
 
-// GetProjectByName retorna um projeto por nome
 func (c *Config) GetProjectByName(name string) *ProjectConfig {
 	for i := range c.Projects {
 		if c.Projects[i].Name == name {
@@ -146,7 +128,6 @@ func (c *Config) GetProjectByName(name string) *ProjectConfig {
 	return nil
 }
 
-// GetProjectByDomain retorna um projeto por domínio
 func (c *Config) GetProjectByDomain(domain string) *ProjectConfig {
 	for i := range c.Projects {
 		if c.Projects[i].Domain == domain {
@@ -156,26 +137,21 @@ func (c *Config) GetProjectByDomain(domain string) *ProjectConfig {
 	return nil
 }
 
-// MergeWith faz merge desta config com outra (override)
 func (c *Config) MergeWith(other *Config) {
-	// Merge de projetos (por nome)
 	for _, otherProject := range other.Projects {
 		found := false
 		for i := range c.Projects {
 			if c.Projects[i].Name == otherProject.Name {
-				// Override do projeto existente
 				c.Projects[i] = otherProject
 				found = true
 				break
 			}
 		}
 		if !found {
-			// Adicionar novo projeto
 			c.Projects = append(c.Projects, otherProject)
 		}
 	}
 
-	// Merge de tools
 	if other.Tools != nil {
 		if c.Tools == nil {
 			c.Tools = make(map[string]ToolVersion)
@@ -185,7 +161,6 @@ func (c *Config) MergeWith(other *Config) {
 		}
 	}
 
-	// Override de proxy config se especificado
 	if other.Proxy.HTTPPort != 0 {
 		c.Proxy.HTTPPort = other.Proxy.HTTPPort
 	}
@@ -196,7 +171,6 @@ func (c *Config) MergeWith(other *Config) {
 		c.Proxy.Dashboard = other.Proxy.Dashboard
 	}
 
-	// Override de remote config
 	if other.Remote.URL != "" {
 		c.Remote = other.Remote
 	}

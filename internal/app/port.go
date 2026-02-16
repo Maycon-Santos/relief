@@ -8,23 +8,19 @@ import (
 	"strings"
 )
 
-// PortConflict representa um conflito de porta
 type PortConflict struct {
 	Port    int    `json:"port"`
 	PID     int    `json:"pid"`
 	Command string `json:"command"`
 }
 
-// CheckPortInUse verifica se uma porta está em uso e retorna informações sobre o processo
 func (a *App) CheckPortInUse(port int) (*PortConflict, error) {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
 	case "darwin", "linux":
-		// lsof -ti:PORT retorna o PID
 		cmd = exec.Command("lsof", "-ti:"+strconv.Itoa(port))
 	case "windows":
-		// netstat -ano | findstr :PORT
 		cmd = exec.Command("netstat", "-ano")
 	default:
 		return nil, fmt.Errorf("sistema operacional não suportado")
@@ -32,7 +28,6 @@ func (a *App) CheckPortInUse(port int) (*PortConflict, error) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Se lsof retornar erro, significa que a porta está livre
 		return nil, nil
 	}
 
@@ -46,7 +41,6 @@ func (a *App) CheckPortInUse(port int) (*PortConflict, error) {
 		return nil, fmt.Errorf("erro ao parsear PID: %w", err)
 	}
 
-	// Obter comando do processo
 	command := ""
 	psCmd := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "command=")
 	if psOutput, err := psCmd.CombinedOutput(); err == nil {
@@ -60,7 +54,6 @@ func (a *App) CheckPortInUse(port int) (*PortConflict, error) {
 	}, nil
 }
 
-// KillProcessByPID mata um processo específico
 func (a *App) KillProcessByPID(pid int) error {
 	a.logger.Info("Encerrando processo", map[string]interface{}{
 		"pid": pid,
