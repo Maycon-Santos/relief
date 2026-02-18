@@ -264,7 +264,7 @@ git push origin v1.0.0
 2. **Biblioteca faltando (Linux):**
    ```bash
    ldd relief  # Veja quais libs estão faltando
-   sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37
+   sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0
    ```
 
 3. **Quarentena do macOS:**

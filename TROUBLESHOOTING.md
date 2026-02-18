@@ -214,7 +214,7 @@ Erro ao tentar executar `wails dev` no Linux.
 
 ```bash
 # Ubuntu/Debian
-sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
 # Fedora
 sudo dnf install gtk3-devel webkit2gtk3-devel
@@ -325,7 +325,7 @@ Problema com o WebView2 (Windows) ou with bibliotecas gráficas (Linux).
 **Linux:**
 ```bash
 # Ubuntu/Debian
-sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
 # Fedora
 sudo dnf install gtk3-devel webkit2gtk3-devel

@@ -145,7 +145,7 @@ curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # 3. Instale dependências do Wails
-sudo apt-get install -y gcc libgtk-3-dev libwebkit2gtk-4 0-dev git
+sudo apt-get install -y gcc libgtk-3-dev libwebkit2gtk-4.1-dev git
 
 # 4. Instale o Wails
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -368,7 +368,7 @@ taskkill /PID <PID> /F
 
 **Linux:**
 ```bash
-sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 ```
 
 **Windows:**
