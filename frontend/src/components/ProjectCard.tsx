@@ -32,7 +32,7 @@ export function ProjectCard({
 	const [error, setError] = useState<string | null>(null);
 	const [portConflict, setPortConflict] = useState<PortConflict | null>(null);
 
-	const handleAction = async (action: () => Promise<void>, actionName: string) => {
+	const handleAction = async (action: () => Promise<void>, actionName: string, openLogsOnError = false) => {
 		try {
 			setLoading(true);
 			setError(null);
@@ -51,6 +51,9 @@ export function ProjectCard({
 				}
 			} else {
 				setError(errorMsg);
+				if (openLogsOnError) {
+					onViewLogs();
+				}
 			}
 		} finally {
 			setLoading(false);
@@ -61,7 +64,7 @@ export function ProjectCard({
 		if (!portConflict) return;
 		await api.killProcessByPID(portConflict.pid);
 		setPortConflict(null);
-		await handleAction(onStart, "start");
+		await handleAction(onStart, "start", true);
 	};
 
 	const _unsatisfiedDeps = project.dependencies.filter((d) => !d.satisfied);
@@ -149,7 +152,7 @@ export function ProjectCard({
 				<div className="flex items-center gap-2 w-full flex-wrap">
 					{isStopped && (
 						<Button
-							onClick={() => handleAction(onStart, "iniciar")}
+							onClick={() => handleAction(onStart, "iniciar", true)}
 							disabled={loading}
 							size="sm"
 							variant="secondary"

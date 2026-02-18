@@ -3,7 +3,9 @@ package dependency
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 
@@ -171,15 +173,14 @@ func (m *EnhancedManager) startService(ctx context.Context, name string, managed
 		"command": managedDep.StartCommand,
 	})
 
-	parts := strings.Fields(managedDep.StartCommand)
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	// Executa via sh -c para suportar operadores shell (&, >, |, &&, etc.)
+	cmd := exec.CommandContext(ctx, "sh", "-c", managedDep.StartCommand)
 
 	if len(managedDep.Environment) > 0 {
-		env := cmd.Env
+		cmd.Env = os.Environ()
 		for key, value := range managedDep.Environment {
-			env = append(env, fmt.Sprintf("%s=%s", key, value))
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 		}
-		cmd.Env = env
 	}
 
 	output, err := cmd.CombinedOutput()
@@ -323,9 +324,14 @@ func (m *EnhancedManager) performHealthCheck(ctx context.Context, serviceName st
 
 // GetManagedServices retorna a lista de todos os serviços gerenciados disponíveis
 func (m *EnhancedManager) GetManagedServices() []ManagedServiceInfo {
-	services := []ManagedServiceInfo{}
-
+	names := make([]string, 0, len(m.config.ManagedDependencies))
 	for name := range m.config.ManagedDependencies {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	services := make([]ManagedServiceInfo, 0, len(names))
+	for _, name := range names {
 		running := m.checkServiceStatus(name)
 		m.runningServices[name] = running
 

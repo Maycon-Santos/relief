@@ -37,6 +37,9 @@ type ProjectConfig struct {
 	Env          map[string]string `yaml:"env"`
 	Port         int               `yaml:"port,omitempty"`
 	AutoStart    bool              `yaml:"auto_start"`
+	AutoInstall  bool              `yaml:"auto_install"`
+	AutoMigrate  bool              `yaml:"auto_migrate"`
+	SetupEnv     bool              `yaml:"setup_env"`
 }
 
 type RepositoryConfig struct {
@@ -168,6 +171,15 @@ func (c *Config) MergeWith(other *Config) {
 		}
 	}
 
+	if other.ManagedDependencies != nil {
+		if c.ManagedDependencies == nil {
+			c.ManagedDependencies = make(map[string]ManagedDependency)
+		}
+		for name, dep := range other.ManagedDependencies {
+			c.ManagedDependencies[name] = dep
+		}
+	}
+
 	if other.Proxy.HTTPPort != 0 {
 		c.Proxy.HTTPPort = other.Proxy.HTTPPort
 	}
@@ -180,5 +192,24 @@ func (c *Config) MergeWith(other *Config) {
 
 	if other.Remote.URL != "" {
 		c.Remote = other.Remote
+	}
+
+	if other.Environment.WorkspacePath != "" {
+		c.Environment.WorkspacePath = other.Environment.WorkspacePath
+	}
+	if other.Environment.ExternalWorkspaceConfig != "" {
+		c.Environment.ExternalWorkspaceConfig = other.Environment.ExternalWorkspaceConfig
+	}
+	if other.Environment.CompanyName != "" {
+		c.Environment.CompanyName = other.Environment.CompanyName
+	}
+
+	if other.Development.GlobalScripts != nil {
+		if c.Development.GlobalScripts == nil {
+			c.Development.GlobalScripts = make(map[string]string)
+		}
+		for name, script := range other.Development.GlobalScripts {
+			c.Development.GlobalScripts[name] = script
+		}
 	}
 }

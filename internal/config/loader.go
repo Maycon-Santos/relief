@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Maycon-Santos/relief/pkg/fileutil"
@@ -22,35 +23,30 @@ func NewLoader() *Loader {
 }
 
 func (l *Loader) LoadConfig(remoteURL, configPath string) (*Config, error) {
-	var finalConfig *Config
-
-	if remoteURL != "" {
-		remoteConfig, err := l.loadRemoteConfig(remoteURL)
-		if err != nil {
-			fmt.Printf("Aviso: não foi possível carregar config remota: %v\n", err)
-		} else {
-			finalConfig = remoteConfig
-			fmt.Printf("Configuração remota carregada de: %s\n", remoteURL)
-		}
-	}
+	finalConfig := defaultConfig()
 
 	if fileutil.Exists(configPath) {
 		localConfig, err := l.loadLocalConfig(configPath)
 		if err != nil {
 			return nil, fmt.Errorf("erro ao carregar config: %w", err)
 		}
-
-		if finalConfig == nil {
-			finalConfig = localConfig
-		} else {
-			finalConfig.MergeWith(localConfig)
-		}
+		finalConfig.MergeWith(localConfig)
 		fmt.Printf("Configuração local carregada de: %s\n", configPath)
 	}
 
-	if finalConfig == nil {
-		fmt.Println("Usando configuração padrão")
-		finalConfig = defaultConfig()
+	effectiveRemoteURL := remoteURL
+	if effectiveRemoteURL == "" && finalConfig.Remote.URL != "" {
+		effectiveRemoteURL = finalConfig.Remote.URL
+	}
+
+	if effectiveRemoteURL != "" {
+		remoteConfig, err := l.loadRemoteConfig(effectiveRemoteURL)
+		if err != nil {
+			fmt.Printf("Aviso: não foi possível carregar config remota: %v\n", err)
+		} else {
+			finalConfig.MergeWith(remoteConfig)
+			fmt.Printf("Configuração remota carregada de: %s\n", effectiveRemoteURL)
+		}
 	}
 
 	if finalConfig.Environment.ExternalWorkspaceConfig != "" {
@@ -102,28 +98,31 @@ func (l *Loader) loadLocalConfig(path string) (*Config, error) {
 func (l *Loader) loadExternalWorkspaceProjects(cfg *Config) error {
 	externalPath := cfg.Environment.ExternalWorkspaceConfig
 
-	fmt.Printf("🔍 Tentando carregar projetos externos...\n")
-	fmt.Printf("   Caminho configurado: %s\n", externalPath)
-	fmt.Printf("   WorkspacePath: %s\n", cfg.Environment.WorkspacePath)
+	if strings.HasPrefix(externalPath, "http://") || strings.HasPrefix(externalPath, "https://") {
+		remoteConfig, err := l.loadRemoteConfig(externalPath)
+		if err != nil {
+			return fmt.Errorf("erro ao carregar projetos externos remotos: %w", err)
+		}
+		if len(remoteConfig.Projects) > 0 {
+			cfg.Projects = append(cfg.Projects, remoteConfig.Projects...)
+		}
+		return nil
+	}
 
 	if cfg.Environment.WorkspacePath != "" {
 		externalPath = cfg.Environment.WorkspacePath + "/" + externalPath
-		fmt.Printf("   Caminho completo: %s\n", externalPath)
 	}
 
 	if len(externalPath) > 0 && externalPath[0] == '~' {
 		homeDir, err := os.UserHomeDir()
 		if err == nil {
 			externalPath = homeDir + externalPath[1:]
-			fmt.Printf("   Caminho expandido: %s\n", externalPath)
 		}
 	}
 
 	if !fileutil.Exists(externalPath) {
 		return fmt.Errorf("arquivo de workspace externo não encontrado: %s", externalPath)
 	}
-
-	fmt.Printf("   ✅ Arquivo encontrado!\n")
 
 	data, err := os.ReadFile(externalPath)
 	if err != nil {
