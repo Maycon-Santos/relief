@@ -24,7 +24,7 @@ export function useProjects() {
 	useEffect(() => {
 		loadProjects();
 
-		const interval = setInterval(loadProjects, 5000);
+		const interval = setInterval(loadProjects, 30000);
 
 		return () => clearInterval(interval);
 	}, [loadProjects]);

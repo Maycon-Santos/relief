@@ -1,7 +1,5 @@
-import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -81,7 +79,7 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
 		<Dialog open onOpenChange={onClose}>
 			<DialogContent className="max-w-5xl h-[80vh] flex flex-col p-0 bg-zinc-950 border-zinc-800">
 				<DialogHeader className="p-6 pb-4 border-b border-zinc-800">
-					<div className="flex items-center justify-between">
+					<div className="flex items-center justify-between pr-6">
 						<DialogTitle className="text-xl font-bold text-white">Logs: {projectName}</DialogTitle>
 						<div className="flex items-center gap-3">
 							<label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
@@ -93,18 +91,9 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
 								/>
 								Auto-scroll
 							</label>
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={onClose}
-								className="hover:bg-zinc-800 text-gray-400 hover:text-white"
-							>
-								<X className="h-4 w-4" />
-							</Button>
 						</div>
 					</div>
 				</DialogHeader>
-
 				<ScrollArea className="flex-1 p-6">
 					<div className="font-mono text-sm space-y-0.5 bg-[#0a1628] rounded-lg p-5 border border-blue-950/50 shadow-inner">
 						{logs.length === 0 ? (
@@ -117,7 +106,7 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
 										key={log.id}
 										className="flex gap-3 items-start py-2 hover:bg-blue-950/40 px-3 -mx-3 rounded transition-colors group"
 									>
-										<span className="text-gray-500 shrink-0 min-w-[70px] text-xs font-medium">
+										<span className="text-gray-500 shrink-0 min-w-17.5 text-xs font-medium">
 											{new Date(log.timestamp).toLocaleTimeString("en-US", {
 												hour12: false,
 											})}
@@ -125,7 +114,7 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
 										<Badge
 											variant="outline"
 											className={cn(
-												"shrink-0 min-w-[70px] justify-center font-bold text-[11px] uppercase tracking-wide",
+												"shrink-0 min-w-17.5 justify-center font-bold text-[11px] uppercase tracking-wide",
 												color,
 												bg,
 												border,

@@ -1,9 +1,12 @@
-import { Folder, Loader2, Package, Plus, RefreshCw, Zap } from "lucide-react";
+import { Folder, Loader2, Package, Plus, RefreshCw, Settings, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfigEditor } from "./components/ConfigEditor";
+import { GlobalScripts } from "./components/GlobalScripts";
 import { LogsViewer } from "./components/LogsViewer";
+import { ManagedServices } from "./components/ManagedServices";
 import { ProjectCard } from "./components/ProjectCard";
 import { useProjects } from "./hooks/useProjects";
 import { api } from "./services/wails";
@@ -23,6 +26,10 @@ function App() {
 	} = useProjects();
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 	const [status, setStatus] = useState<AppStatus | null>(null);
+	const [managedServices, setManagedServices] = useState<Array<{ name: string; running: boolean }>>(
+		[],
+	);
+	const [configEditorOpen, setConfigEditorOpen] = useState(false);
 
 	useEffect(() => {
 		const loadStatus = async () => {
@@ -34,8 +41,21 @@ function App() {
 			}
 		};
 
+		const loadServices = async () => {
+			try {
+				const services = await api.getManagedServices();
+				setManagedServices(services);
+			} catch (err) {
+				console.error("Error loading managed services:", err);
+			}
+		};
+
 		loadStatus();
-		const interval = setInterval(loadStatus, 5000);
+		loadServices();
+		const interval = setInterval(() => {
+			loadStatus();
+			loadServices();
+		}, 5000);
 
 		return () => clearInterval(interval);
 	}, []);
@@ -49,6 +69,28 @@ function App() {
 			console.error("Error adding project:", err);
 			const message = err instanceof Error ? err.message : "Error adding project";
 			alert(`Failed to add project:\n\n${message}`);
+		}
+	};
+
+	const handleStartService = async (serviceName: string) => {
+		try {
+			await api.startManagedService(serviceName);
+			const services = await api.getManagedServices();
+			setManagedServices(services);
+		} catch (err) {
+			console.error("Error starting service:", err);
+			throw err;
+		}
+	};
+
+	const handleStopService = async (serviceName: string) => {
+		try {
+			await api.stopManagedService(serviceName);
+			const services = await api.getManagedServices();
+			setManagedServices(services);
+		} catch (err) {
+			console.error("Error stopping service:", err);
+			throw err;
 		}
 	};
 
@@ -67,6 +109,16 @@ function App() {
 							</div>
 						</div>
 						<div className="flex gap-3">
+							<Button
+								onClick={() => setConfigEditorOpen(true)}
+								disabled={loading}
+								variant="outline"
+								size="default"
+								className="border-zinc-700 text-gray-300 hover:bg-zinc-800 hover:text-white transition-colors"
+							>
+								<Settings className="h-4 w-4 mr-2" />
+								Settings
+							</Button>
 							<Button
 								onClick={handleAddProject}
 								disabled={loading}
@@ -130,6 +182,18 @@ function App() {
 			</header>
 
 			<main className="container mx-auto max-w-7xl px-6 py-8">
+				{managedServices.length > 0 && (
+					<div className="mb-8">
+						<ManagedServices
+							services={managedServices}
+							onStartService={handleStartService}
+							onStopService={handleStopService}
+						/>
+					</div>
+				)}
+
+				<GlobalScripts />
+
 				<div className="mb-6 flex items-center gap-2 text-gray-500">
 					<Folder className="h-5 w-5" />
 					<h2 className="text-lg font-semibold">Projects</h2>
@@ -185,6 +249,7 @@ function App() {
 					onClose={() => setSelectedProjectId(null)}
 				/>
 			)}
+			<ConfigEditor open={configEditorOpen} onOpenChange={setConfigEditorOpen} />
 		</div>
 	);
 }

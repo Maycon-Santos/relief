@@ -31,7 +31,7 @@ export function GitControls({ project, onGitInfoUpdate }: GitControlsProps) {
 		} finally {
 			setLoading(false);
 		}
-	}, [project.id, onGitInfoUpdate]);
+	}, [project.id, onGitInfoUpdate]); // Removido onGitInfoUpdate das dependências
 
 	useEffect(() => {
 		loadGitInfo();

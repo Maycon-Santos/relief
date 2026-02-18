@@ -6,10 +6,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/hashicorp/go-version"
 	"github.com/Maycon-Santos/relief/internal/dependency/checkers"
 	"github.com/Maycon-Santos/relief/internal/domain"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/hashicorp/go-version"
 )
 
 type Manager struct {
@@ -67,6 +67,15 @@ func (m *Manager) CheckDependencies(ctx context.Context, project *domain.Project
 }
 
 func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) error {
+	if dep.Managed {
+		m.logger.Debug("Dependência gerenciada, pulando verificação", map[string]interface{}{
+			"dependency": dep.Name,
+		})
+		dep.Satisfied = true
+		dep.Version = dep.RequiredVersion
+		return nil
+	}
+
 	checker, exists := m.checkers[dep.Name]
 	if !exists {
 		return m.checkGenericCommand(ctx, dep)
@@ -74,23 +83,7 @@ func (m *Manager) checkDependency(ctx context.Context, dep *domain.Dependency) e
 
 	installedVersion, err := checker.Check(ctx)
 	if err != nil {
-		if dep.Managed {
-			m.logger.Info("Trying to install dependency", map[string]interface{}{
-				"dependency": dep.Name,
-				"version":    dep.RequiredVersion,
-			})
-
-			if err := checker.Install(ctx, dep.RequiredVersion); err != nil {
-				return fmt.Errorf("error installing: %w", err)
-			}
-
-			installedVersion, err = checker.Check(ctx)
-			if err != nil {
-				return fmt.Errorf("dependency not found after installation: %w", err)
-			}
-		} else {
-			return fmt.Errorf("not installed: %w", err)
-		}
+		return fmt.Errorf("not installed: %w", err)
 	}
 
 	if err := m.validateVersion(installedVersion, dep.RequiredVersion); err != nil {
@@ -167,10 +160,22 @@ func (m *Manager) validateVersion(installed, required string) error {
 }
 
 func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependency) error {
-	cmd := exec.CommandContext(ctx, dep.Name, "--version")
+	commandMap := map[string]string{
+		"redis":      "redis-server",
+		"mongodb":    "mongod",
+		"postgres":   "psql",
+		"postgresql": "psql",
+	}
+
+	cmdName := dep.Name
+	if mapped, exists := commandMap[dep.Name]; exists {
+		cmdName = mapped
+	}
+
+	cmd := exec.CommandContext(ctx, cmdName, "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("command not found")
+		return fmt.Errorf("command not found or not in PATH")
 	}
 
 	version := strings.TrimSpace(string(output))
@@ -184,6 +189,7 @@ func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependenc
 
 	m.logger.Info("Generic dependency verified", map[string]interface{}{
 		"dependency": dep.Name,
+		"command":    cmdName,
 		"version":    version,
 	})
 

@@ -21,7 +21,7 @@ func NewLoader() *Loader {
 	}
 }
 
-func (l *Loader) LoadConfig(remoteURL, localPath string) (*Config, error) {
+func (l *Loader) LoadConfig(remoteURL, configPath string) (*Config, error) {
 	var finalConfig *Config
 
 	if remoteURL != "" {
@@ -30,27 +30,14 @@ func (l *Loader) LoadConfig(remoteURL, localPath string) (*Config, error) {
 			fmt.Printf("Aviso: não foi possível carregar config remota: %v\n", err)
 		} else {
 			finalConfig = remoteConfig
+			fmt.Printf("Configuração remota carregada de: %s\n", remoteURL)
 		}
 	}
 
-	globalPath, err := GetGlobalConfigPath()
-	if err == nil && fileutil.Exists(globalPath) {
-		globalConfig, err := l.loadLocalConfig(globalPath)
+	if fileutil.Exists(configPath) {
+		localConfig, err := l.loadLocalConfig(configPath)
 		if err != nil {
-			fmt.Printf("Aviso: não foi possível carregar config global: %v\n", err)
-		} else {
-			if finalConfig == nil {
-				finalConfig = globalConfig
-			} else {
-				finalConfig.MergeWith(globalConfig)
-			}
-		}
-	}
-
-	if fileutil.Exists(localPath) {
-		localConfig, err := l.loadLocalConfig(localPath)
-		if err != nil {
-			return nil, fmt.Errorf("erro ao carregar config local: %w", err)
+			return nil, fmt.Errorf("erro ao carregar config: %w", err)
 		}
 
 		if finalConfig == nil {
@@ -58,10 +45,20 @@ func (l *Loader) LoadConfig(remoteURL, localPath string) (*Config, error) {
 		} else {
 			finalConfig.MergeWith(localConfig)
 		}
+		fmt.Printf("Configuração local carregada de: %s\n", configPath)
 	}
 
 	if finalConfig == nil {
+		fmt.Println("Usando configuração padrão")
 		finalConfig = defaultConfig()
+	}
+
+	if finalConfig.Environment.ExternalWorkspaceConfig != "" {
+		if err := l.loadExternalWorkspaceProjects(finalConfig); err != nil {
+			fmt.Printf("Aviso: não foi possível carregar projetos do workspace externo: %v\n", err)
+		} else {
+			fmt.Printf("Projetos carregados do workspace externo: %s\n", finalConfig.Environment.ExternalWorkspaceConfig)
+		}
 	}
 
 	if err := finalConfig.Validate(); err != nil {
@@ -100,6 +97,50 @@ func (l *Loader) loadLocalConfig(path string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (l *Loader) loadExternalWorkspaceProjects(cfg *Config) error {
+	externalPath := cfg.Environment.ExternalWorkspaceConfig
+
+	fmt.Printf("🔍 Tentando carregar projetos externos...\n")
+	fmt.Printf("   Caminho configurado: %s\n", externalPath)
+	fmt.Printf("   WorkspacePath: %s\n", cfg.Environment.WorkspacePath)
+
+	if cfg.Environment.WorkspacePath != "" {
+		externalPath = cfg.Environment.WorkspacePath + "/" + externalPath
+		fmt.Printf("   Caminho completo: %s\n", externalPath)
+	}
+
+	if len(externalPath) > 0 && externalPath[0] == '~' {
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			externalPath = homeDir + externalPath[1:]
+			fmt.Printf("   Caminho expandido: %s\n", externalPath)
+		}
+	}
+
+	if !fileutil.Exists(externalPath) {
+		return fmt.Errorf("arquivo de workspace externo não encontrado: %s", externalPath)
+	}
+
+	fmt.Printf("   ✅ Arquivo encontrado!\n")
+
+	data, err := os.ReadFile(externalPath)
+	if err != nil {
+		return fmt.Errorf("erro ao ler arquivo de workspace externo: %w", err)
+	}
+
+	var externalConfig Config
+	if err := yaml.Unmarshal(data, &externalConfig); err != nil {
+		return fmt.Errorf("erro ao fazer parse do arquivo de workspace externo: %w", err)
+	}
+
+	if len(externalConfig.Projects) > 0 {
+		fmt.Printf("Carregando %d projetos do workspace externo: %s\n", len(externalConfig.Projects), externalPath)
+		cfg.Projects = append(cfg.Projects, externalConfig.Projects...)
+	}
+
+	return nil
 }
 
 func (l *Loader) SaveConfig(config *Config, path string) error {
@@ -145,20 +186,4 @@ func GetConfigPath() (string, error) {
 		return "", err
 	}
 	return reliefDir + "/config.yaml", nil
-}
-
-func GetLocalConfigPath() (string, error) {
-	reliefDir, err := fileutil.GetReliefDir()
-	if err != nil {
-		return "", err
-	}
-	return reliefDir + "/config.local.yaml", nil
-}
-
-func GetGlobalConfigPath() (string, error) {
-	reliefDir, err := fileutil.GetReliefDir()
-	if err != nil {
-		return "", err
-	}
-	return reliefDir + "/config.global.yaml", nil
 }

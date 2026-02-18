@@ -11,6 +11,13 @@ type Config struct {
 	Development         DevelopmentConfig            `yaml:"development"`
 	Logging             LoggingConfig                `yaml:"logging"`
 	HealthChecks        map[string]HealthCheckConfig `yaml:"health_checks"`
+	Environment         EnvironmentConfig            `yaml:"environment"`
+}
+
+type EnvironmentConfig struct {
+	CompanyName             string `yaml:"company_name"`
+	WorkspacePath           string `yaml:"workspace_path"`
+	ExternalWorkspaceConfig string `yaml:"external_workspace_config"`
 }
 
 type RemoteConfig struct {

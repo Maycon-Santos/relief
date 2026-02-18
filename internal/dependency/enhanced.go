@@ -320,3 +320,113 @@ func (m *EnhancedManager) performHealthCheck(ctx context.Context, serviceName st
 		})
 	}
 }
+
+// GetManagedServices retorna a lista de todos os serviços gerenciados disponíveis
+func (m *EnhancedManager) GetManagedServices() []ManagedServiceInfo {
+	services := []ManagedServiceInfo{}
+
+	for name := range m.config.ManagedDependencies {
+		running := m.checkServiceStatus(name)
+		m.runningServices[name] = running
+
+		services = append(services, ManagedServiceInfo{
+			Name:    name,
+			Running: running,
+		})
+	}
+
+	return services
+}
+
+// checkServiceStatus verifica se um serviço está realmente rodando no sistema
+func (m *EnhancedManager) checkServiceStatus(serviceName string) bool {
+	switch serviceName {
+	case "postgres":
+		return m.checkBrewService("postgresql@16")
+	case "redis":
+		return m.checkBrewService("redis")
+	case "mongodb":
+		return m.checkBrewService("mongodb-community")
+	case "localstack":
+		return m.checkLocalstackStatus()
+	default:
+		return m.runningServices[serviceName]
+	}
+}
+
+// checkBrewService verifica se um serviço do homebrew está rodando
+func (m *EnhancedManager) checkBrewService(serviceName string) bool {
+	cmd := exec.Command("brew", "services", "list")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, serviceName) && strings.Contains(line, "started") {
+			return true
+		}
+	}
+	return false
+}
+
+// checkLocalstackStatus verifica se o LocalStack está rodando
+func (m *EnhancedManager) checkLocalstackStatus() bool {
+	cmd := exec.Command("localstack", "status")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(string(output), "running")
+}
+
+// StartService inicia um serviço gerenciado específico
+func (m *EnhancedManager) StartService(ctx context.Context, serviceName string) error {
+	if m.runningServices[serviceName] {
+		return fmt.Errorf("serviço %s já está executando", serviceName)
+	}
+
+	managedDep, exists := m.config.ManagedDependencies[serviceName]
+	if !exists {
+		return fmt.Errorf("serviço %s não configurado", serviceName)
+	}
+
+	if err := m.startService(ctx, serviceName, managedDep); err != nil {
+		return err
+	}
+
+	m.runningServices[serviceName] = true
+	m.startHealthCheck(ctx, serviceName)
+
+	return nil
+}
+
+// StopService para um serviço gerenciado específico
+func (m *EnhancedManager) StopService(ctx context.Context, serviceName string) error {
+	if !m.runningServices[serviceName] {
+		return fmt.Errorf("serviço %s não está executando", serviceName)
+	}
+
+	managedDep, exists := m.config.ManagedDependencies[serviceName]
+	if !exists {
+		return fmt.Errorf("serviço %s não configurado", serviceName)
+	}
+
+	m.stopHealthCheck(serviceName)
+
+	if err := m.stopService(ctx, serviceName, managedDep); err != nil {
+		return err
+	}
+
+	m.runningServices[serviceName] = false
+
+	return nil
+}
+
+// ManagedServiceInfo representa informações sobre um serviço gerenciado
+type ManagedServiceInfo struct {
+	Name    string `json:"name"`
+	Running bool   `json:"running"`
+}

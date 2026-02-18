@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/Maycon-Santos/relief/internal/config"
 	"github.com/Maycon-Santos/relief/internal/dependency"
@@ -12,7 +14,9 @@ import (
 	"github.com/Maycon-Santos/relief/internal/runner"
 	"github.com/Maycon-Santos/relief/internal/storage"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/pathutil"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"gopkg.in/yaml.v3"
 )
 
 type App struct {
@@ -55,11 +59,10 @@ func (a *App) Startup(ctx context.Context) {
 	a.configLoader = config.NewLoader()
 
 	configPath, _ := config.GetConfigPath()
-	localConfigPath, _ := config.GetLocalConfigPath()
 
 	cfg, err := a.configLoader.LoadConfig("", configPath)
 	if err != nil {
-		a.logger.Warn("Usando configuração padrão", map[string]interface{}{
+		a.logger.Warn("Erro ao carregar configuração, usando padrão", map[string]interface{}{
 			"error": err.Error(),
 		})
 		cfg = &config.Config{
@@ -75,10 +78,6 @@ func (a *App) Startup(ctx context.Context) {
 	}
 	if cfg.Proxy.HTTPSPort == 0 {
 		cfg.Proxy.HTTPSPort = 443
-	}
-
-	if localCfg, err := a.configLoader.LoadConfig("", localConfigPath); err == nil {
-		cfg.MergeWith(localCfg)
 	}
 
 	a.config = cfg
@@ -356,6 +355,13 @@ func (a *App) AddLocalProject(path string) error {
 		project.UpdateGitInfo(gitInfo)
 	}
 
+	if err := a.dependencyMgr.CheckDependencies(a.ctx, project); err != nil {
+		a.logger.Warn("Erro ao verificar dependências", map[string]interface{}{
+			"project": project.Name,
+			"error":   err.Error(),
+		})
+	}
+
 	if err := a.projectRepo.Create(project); err != nil {
 		return fmt.Errorf("failed to save project: %w", err)
 	}
@@ -389,15 +395,10 @@ func (a *App) RefreshConfig() error {
 	a.logger.Info("Recarregando configuração", nil)
 
 	configPath, _ := config.GetConfigPath()
-	localConfigPath, _ := config.GetLocalConfigPath()
 
 	cfg, err := a.configLoader.LoadConfig("", configPath)
 	if err != nil {
 		return fmt.Errorf("erro ao carregar config: %w", err)
-	}
-
-	if localCfg, err := a.configLoader.LoadConfig("", localConfigPath); err == nil {
-		cfg.MergeWith(localCfg)
 	}
 
 	a.config = cfg
@@ -521,11 +522,20 @@ func (a *App) cleanupOrphanProcesses() {
 }
 
 func (a *App) syncConfigProjects() {
-	a.logger.Info("Sincronizando projetos da configuração", nil)
+	a.logger.Info("Sincronizando projetos da configuração", map[string]interface{}{
+		"total_projects": len(a.config.Projects),
+	})
+
+	if len(a.config.Projects) == 0 {
+		a.logger.Warn("Nenhum projeto encontrado na configuração", map[string]interface{}{
+			"workspace_config": a.config.Environment.ExternalWorkspaceConfig,
+		})
+		return
+	}
 
 	for _, projectConfig := range a.config.Projects {
 		existingProject, err := a.projectRepo.GetByName(projectConfig.Name)
-		if err != nil && err.Error() != "project not found" {
+		if err != nil && err.Error() != "projeto não encontrado" {
 			a.logger.Warn("Erro ao buscar projeto existente", map[string]interface{}{
 				"project": projectConfig.Name,
 				"error":   err.Error(),
@@ -546,6 +556,14 @@ func (a *App) syncConfigProjects() {
 
 		if existingProject == nil {
 			project := a.createProjectFromConfig(projectConfig)
+
+			if err := a.dependencyMgr.CheckDependencies(a.ctx, project); err != nil {
+				a.logger.Warn("Erro ao verificar dependências", map[string]interface{}{
+					"project": projectConfig.Name,
+					"error":   err.Error(),
+				})
+			}
+
 			if err := a.projectRepo.Create(project); err != nil {
 				a.logger.Warn("Erro ao salvar novo projeto", map[string]interface{}{
 					"project": projectConfig.Name,
@@ -558,6 +576,14 @@ func (a *App) syncConfigProjects() {
 			}
 		} else {
 			a.updateProjectFromConfig(existingProject, projectConfig)
+
+			if err := a.dependencyMgr.CheckDependencies(a.ctx, existingProject); err != nil {
+				a.logger.Warn("Erro ao verificar dependências", map[string]interface{}{
+					"project": projectConfig.Name,
+					"error":   err.Error(),
+				})
+			}
+
 			if err := a.projectRepo.Update(existingProject); err != nil {
 				a.logger.Warn("Erro ao atualizar projeto", map[string]interface{}{
 					"project": projectConfig.Name,
@@ -808,4 +834,161 @@ func (a *App) RefreshProjectGitInfo(id string) error {
 
 	project.UpdateGitInfo(gitInfo)
 	return a.projectRepo.Update(project)
+}
+
+func (a *App) GetManagedServices() []interface{} {
+	if a.enhancedDepMgr == nil {
+		return []interface{}{}
+	}
+
+	services := a.enhancedDepMgr.GetManagedServices()
+	result := make([]interface{}, len(services))
+	for i, s := range services {
+		result[i] = map[string]interface{}{
+			"name":    s.Name,
+			"running": s.Running,
+		}
+	}
+	return result
+}
+
+func (a *App) StartManagedService(serviceName string) error {
+	if a.enhancedDepMgr == nil {
+		return fmt.Errorf("gerenciador de dependências não inicializado")
+	}
+
+	a.logger.Info("Iniciando serviço gerenciado", map[string]interface{}{
+		"service": serviceName,
+	})
+
+	return a.enhancedDepMgr.StartService(a.ctx, serviceName)
+}
+
+func (a *App) StopManagedService(serviceName string) error {
+	if a.enhancedDepMgr == nil {
+		return fmt.Errorf("gerenciador de dependências não inicializado")
+	}
+
+	a.logger.Info("Parando serviço gerenciado", map[string]interface{}{
+		"service": serviceName,
+	})
+
+	return a.enhancedDepMgr.StopService(a.ctx, serviceName)
+}
+
+func (a *App) GetGlobalConfig() (map[string]interface{}, error) {
+	if a.config == nil {
+		return nil, fmt.Errorf("configuração não carregada")
+	}
+
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		return nil, fmt.Errorf("erro ao obter caminho da config: %w", err)
+	}
+
+	return map[string]interface{}{
+		"config": a.config,
+		"path":   configPath,
+	}, nil
+}
+
+func (a *App) SaveGlobalConfig(configYAML string) error {
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		return fmt.Errorf("erro ao obter caminho da config: %w", err)
+	}
+
+	absoluteYAML := pathutil.ConvertYAMLPathsToAbsolute(configYAML)
+
+	var newConfig config.Config
+	if err := yaml.Unmarshal([]byte(absoluteYAML), &newConfig); err != nil {
+		return fmt.Errorf("YAML inválido: %w", err)
+	}
+
+	if err := newConfig.Validate(); err != nil {
+		return fmt.Errorf("configuração inválida: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, []byte(configYAML), 0644); err != nil {
+		return fmt.Errorf("erro ao salvar arquivo: %w", err)
+	}
+
+	a.logger.Info("Configuração global salva", map[string]interface{}{
+		"path": configPath,
+	})
+
+	a.config = &newConfig
+
+	return nil
+}
+
+func (a *App) GetConfigYAML() (string, error) {
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		return "", fmt.Errorf("erro ao obter caminho da config: %w", err)
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return "", fmt.Errorf("erro ao ler arquivo de configuração: %w", err)
+	}
+
+	yamlContent := pathutil.ConvertYAMLPathsToRelative(string(data))
+
+	return yamlContent, nil
+}
+
+func (a *App) OpenConfigInEditor() error {
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		return fmt.Errorf("erro ao obter caminho da config: %w", err)
+	}
+
+	runtime.BrowserOpenURL(a.ctx, "file://"+configPath)
+	return nil
+}
+
+func (a *App) GetGlobalScripts() map[string]string {
+	if a.config == nil || a.config.Development.GlobalScripts == nil {
+		return make(map[string]string)
+	}
+	return a.config.Development.GlobalScripts
+}
+
+func (a *App) ExecuteGlobalScript(scriptName string) error {
+	if a.config == nil {
+		return fmt.Errorf("configuração não carregada")
+	}
+
+	script, exists := a.config.Development.GlobalScripts[scriptName]
+	if !exists {
+		return fmt.Errorf("script '%s' não encontrado", scriptName)
+	}
+
+	a.logger.Info("Executando script global", map[string]interface{}{
+		"script":  scriptName,
+		"command": script,
+	})
+
+	workspaceDir := a.config.Environment.WorkspacePath
+	if workspaceDir == "" {
+		workspaceDir = "."
+	}
+
+	workspaceDir = pathutil.FromRelativeHome(workspaceDir)
+
+	cmd := exec.CommandContext(a.ctx, "sh", "-c", script)
+	cmd.Dir = workspaceDir
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("erro ao executar script: %w\nOutput: %s", err, string(output))
+	}
+
+	a.logger.Info("Script global executado com sucesso", map[string]interface{}{
+		"script": scriptName,
+		"output": string(output),
+	})
+
+	return nil
 }

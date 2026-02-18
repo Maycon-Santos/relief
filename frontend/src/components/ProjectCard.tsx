@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
 import { api, type PortConflict } from "../services/wails";
-import type { GitInfo, Project } from "../types/project";
+import type { Project } from "../types/project";
 import { DependencyAlert } from "./DependencyAlert";
 import { GitControls } from "./GitControls";
 import { PortConflictModal } from "./PortConflictModal";
@@ -32,10 +32,6 @@ export function ProjectCard({
 	const [error, setError] = useState<string | null>(null);
 	const [portConflict, setPortConflict] = useState<PortConflict | null>(null);
 
-	const handleGitInfoUpdate = (gitInfo: GitInfo) => {
-		console.log("Git info updated:", gitInfo);
-	};
-
 	const handleAction = async (action: () => Promise<void>, actionName: string) => {
 		try {
 			setLoading(true);
@@ -43,7 +39,6 @@ export function ProjectCard({
 			await action();
 		} catch (err) {
 			const errorMsg = err instanceof Error ? err.message : `Error on ${actionName}`;
-
 
 			if (errorMsg.startsWith("PORT_IN_USE:")) {
 				const parts = errorMsg.split(":");
@@ -69,7 +64,7 @@ export function ProjectCard({
 		await handleAction(onStart, "start");
 	};
 
-	const unsatisfiedDeps = project.dependencies.filter((d) => !d.satisfied);
+	const _unsatisfiedDeps = project.dependencies.filter((d) => !d.satisfied);
 	const isRunning = project.status === "running";
 	const isStopped = project.status === "stopped";
 
@@ -133,10 +128,8 @@ export function ProjectCard({
 					)}
 				</div>
 
-				<GitControls project={project} onGitInfoUpdate={handleGitInfoUpdate} />
-
-				{unsatisfiedDeps.length > 0 && <DependencyAlert dependencies={unsatisfiedDeps} />}
-
+				<GitControls project={project} />
+				{_unsatisfiedDeps.length > 0 && <DependencyAlert dependencies={_unsatisfiedDeps} />}
 				{error && (
 					<Alert variant="destructive">
 						<AlertCircle className="h-4 w-4" />
