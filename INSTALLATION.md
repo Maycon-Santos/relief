@@ -88,13 +88,7 @@ source ~/.zshrc
 #### Opção 1: Download e Instalação Automática (Recomendado)
 
 ```bash
-# Para x86_64 (AMD64)
 curl -L https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-amd64.tar.gz | tar xz
-sudo mv relief /usr/local/bin/
-sudo chmod +x /usr/local/bin/relief
-
-# Para ARM64
-curl -L https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-arm64.tar.gz | tar xz
 sudo mv relief /usr/local/bin/
 sudo chmod +x /usr/local/bin/relief
 ```
@@ -102,8 +96,7 @@ sudo chmod +x /usr/local/bin/relief
 #### Opção 2: Download Manual
 
 1. **Baixe o binário:**
-   - x86_64: [relief-linux-amd64.tar.gz](https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-amd64.tar.gz)
-   - ARM64: [relief-linux-arm64.tar.gz](https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-arm64.tar.gz)
+   - [relief-linux-amd64.tar.gz](https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-amd64.tar.gz)
 
 2. **Extraia e instale:**
    ```bash
@@ -909,13 +902,8 @@ xattr -cr /Applications/Relief.app
 #### Linux
 
 ```bash
-# Para x86_64
+# Linux
 curl -L https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-amd64.tar.gz | tar xz
-sudo mv relief /usr/local/bin/
-sudo chmod +x /usr/local/bin/relief
-
-# Para ARM64
-curl -L https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-arm64.tar.gz | tar xz
 sudo mv relief /usr/local/bin/
 sudo chmod +x /usr/local/bin/relief
 

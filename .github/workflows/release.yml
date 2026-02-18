@@ -36,10 +36,6 @@ jobs:
             goos: linux
             goarch: amd64
             output: relief-linux-amd64
-          - os: ubuntu-latest
-            goos: linux
-            goarch: arm64
-            output: relief-linux-arm64
           
           # Windows builds
           - os: windows-latest

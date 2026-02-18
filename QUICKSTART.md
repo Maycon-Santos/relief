@@ -45,7 +45,7 @@ sudo mv relief /usr/local/bin/
 sudo chmod +x /usr/local/bin/relief
 
 # ARM64
-curl -L https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-arm64.tar.gz | tar xz
+curl -L https://github.com/Maycon-Santos/relief/releases/latest/download/relief-linux-amd64.tar.gz | tar xz
 sudo mv relief /usr/local/bin/
 sudo chmod +x /usr/local/bin/relief
 
