@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/relief-org/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/logger"
 )
 
 type PostgresChecker struct {

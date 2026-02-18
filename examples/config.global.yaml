@@ -51,4 +51,4 @@ project_defaults:
 environment:
   company_name: "Relief Organization"
   registry_url: "registry.exemplo.com"
-  git_base_url: "https://github.com/relief-org"
+  git_base_url: "https://github.com/Maycon-Santos"

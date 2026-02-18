@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/relief-org/relief/pkg/fileutil"
-	"github.com/relief-org/relief/pkg/httputil"
+	"github.com/Maycon-Santos/relief/pkg/fileutil"
+	"github.com/Maycon-Santos/relief/pkg/httputil"
 	"gopkg.in/yaml.v3"
 )
 

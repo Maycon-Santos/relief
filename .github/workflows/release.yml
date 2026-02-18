@@ -1,0 +1,233 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Release Binaries
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # macOS builds
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            output: relief-darwin-amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            output: relief-darwin-arm64
+          
+          # Linux builds
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            output: relief-linux-amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            output: relief-linux-arm64
+          
+          # Windows builds
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            output: relief-windows-amd64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build with Wails
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          wails build -clean -platform ${{ matrix.goos }}/${{ matrix.goarch }}
+
+      - name: Prepare artifact (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd build/bin
+          if [ -d "Relief.app" ]; then
+            # macOS app bundle
+            tar -czf ../../${{ matrix.output }}.tar.gz Relief.app
+          else
+            # Linux binary
+            tar -czf ../../${{ matrix.output }}.tar.gz relief
+          fi
+
+      - name: Prepare artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd build/bin
+          Compress-Archive -Path relief.exe -DestinationPath ../../${{ matrix.output }}.zip
+
+      - name: Upload artifact (Unix)
+        if: matrix.os != 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: ${{ matrix.output }}.tar.gz
+          retention-days: 5
+
+      - name: Upload artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: ${{ matrix.output }}.zip
+          retention-days: 5
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release-files/ \;
+          ls -lh release-files/
+
+      - name: Generate checksums
+        working-directory: release-files
+        run: |
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Relief ${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-files/*
+          body: |
+            ## 🎉 Release ${{ steps.get_version.outputs.version }}
+            
+            ### 📦 Instalação Rápida
+            
+            #### macOS
+            ```bash
+            # Intel (x86_64)
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/relief-darwin-amd64.tar.gz | tar xz
+            sudo mv Relief.app /Applications/
+            
+            # Apple Silicon (M1/M2/M3)
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/relief-darwin-arm64.tar.gz | tar xz
+            sudo mv Relief.app /Applications/
+            ```
+            
+            #### Linux
+            ```bash
+            # x86_64
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/relief-linux-amd64.tar.gz | tar xz
+            sudo mv relief /usr/local/bin/
+            
+            # ARM64
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/relief-linux-arm64.tar.gz | tar xz
+            sudo mv relief /usr/local/bin/
+            ```
+            
+            #### Windows
+            ```powershell
+            # Baixe o arquivo zip e extraia manualmente
+            # Ou use PowerShell:
+            Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/relief-windows-amd64.exe.zip" -OutFile "relief.zip"
+            Expand-Archive -Path relief.zip -DestinationPath .
+            ```
+            
+            ### 📋 Checksums (SHA256)
+            
+            Verifique a integridade dos arquivos baixados:
+            ```
+            $(cat release-files/checksums.txt)
+            ```
+            
+            ### 📚 Documentação
+            
+            - [Guia de Instalação Completo](https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md)
+            - [Início Rápido](https://github.com/${{ github.repository }}/blob/main/QUICKSTART.md)
+            - [Guia de Solução de Problemas](https://github.com/${{ github.repository }}/blob/main/TROUBLESHOOTING.md)
+            
+            ### 🐛 Issues e Suporte
+            
+            Encontrou algum problema? [Abra uma issue](https://github.com/${{ github.repository }}/issues/new)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job opcional para criar uma release no Homebrew (macOS)
+  homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Placeholder for Homebrew formula update
+        run: |
+          echo "TODO: Update Homebrew formula"
+          echo "This would update a homebrew-tap repository with the new version"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/relief-org/relief/internal/domain"
-	"github.com/relief-org/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/internal/domain"
+	"github.com/Maycon-Santos/relief/pkg/logger"
 )
 
 type DockerRunner struct {

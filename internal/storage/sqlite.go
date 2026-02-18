@@ -8,8 +8,8 @@ import (
 	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/relief-org/relief/pkg/fileutil"
-	"github.com/relief-org/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/fileutil"
+	"github.com/Maycon-Santos/relief/pkg/logger"
 )
 
 //go:embed migrations/*.sql

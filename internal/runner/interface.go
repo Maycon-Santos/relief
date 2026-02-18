@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/relief-org/relief/internal/domain"
+	"github.com/Maycon-Santos/relief/internal/domain"
 )
 
 type ProjectRunner interface {

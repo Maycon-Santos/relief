@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/relief-org/relief/pkg/fileutil"
-	"github.com/relief-org/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/fileutil"
+	"github.com/Maycon-Santos/relief/pkg/logger"
 )
 
 type HostsManager struct {

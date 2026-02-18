@@ -1,4 +1,4 @@
-module github.com/relief-org/relief
+module github.com/Maycon-Santos/relief
 
 go 1.22.0
 

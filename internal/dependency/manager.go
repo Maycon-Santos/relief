@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	"github.com/relief-org/relief/internal/dependency/checkers"
-	"github.com/relief-org/relief/internal/domain"
-	"github.com/relief-org/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/internal/dependency/checkers"
+	"github.com/Maycon-Santos/relief/internal/domain"
+	"github.com/Maycon-Santos/relief/pkg/logger"
 )
 
 type Manager struct {

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/relief-org/relief/internal/config"
-	"github.com/relief-org/relief/internal/domain"
-	"github.com/relief-org/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/internal/config"
+	"github.com/Maycon-Santos/relief/internal/domain"
+	"github.com/Maycon-Santos/relief/pkg/logger"
 )
 
 type EnhancedManager struct {

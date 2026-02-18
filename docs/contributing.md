@@ -30,11 +30,11 @@ Existem várias formas de contribuir, e você não precisa ser um expert:
 
 ### Passo 1: Verifique se já foi reportado
 
-Antes de criar uma nova issue, [procure nas issues existentes](https://github.com/seu-usuario/relief/issues) para ver se alguém já reportou o mesmo problema.
+Antes de criar uma nova issue, [procure nas issues existentes](https://github.com/Maycon-Santos/relief/issues) para ver se alguém já reportou o mesmo problema.
 
 ### Passo 2: Crie uma Issue
 
-Se é um bug novo, [crie uma issue](https://github.com/seu-usuario/relief/issues/new) incluindo:
+Se é um bug novo, [crie uma issue](https://github.com/Maycon-Santos/relief/issues/new) incluindo:
 
 ```markdown
 **Descrição do Bug**
@@ -70,7 +70,7 @@ Cole aqui os logs relevantes
 
 ### Passo 1: Descreva sua ideia
 
-[Abra uma issue](https://github.com/seu-usuario/relief/issues/new) com:
+[Abra uma issue](https://github.com/Maycon-Santos/relief/issues/new) com:
 
 ```markdown
 **Funcionalidade Sugerida**
@@ -483,8 +483,8 @@ Geralmente alguns dias. Projetos open source dependem de voluntários, então po
 
 ## 🤔 Precisa de Ajuda?
 
-- **Issues**: [GitHub Issues](https://github.com/seu-usuario/relief/issues)
-- **Discussões**: [GitHub Discussions](https://github.com/seu-usuario/relief/discussions)
+- **Issues**: [GitHub Issues](https://github.com/Maycon-Santos/relief/issues)
+- **Discussões**: [GitHub Discussions](https://github.com/Maycon-Santos/relief/discussions)
 - **Email**: Veja o README principal
 
 ---
