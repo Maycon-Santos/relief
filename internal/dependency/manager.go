@@ -3,12 +3,12 @@ package dependency
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/Maycon-Santos/relief/internal/dependency/checkers"
 	"github.com/Maycon-Santos/relief/internal/domain"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/shellenv"
 	"github.com/hashicorp/go-version"
 )
 
@@ -172,7 +172,7 @@ func (m *Manager) checkGenericCommand(ctx context.Context, dep *domain.Dependenc
 		cmdName = mapped
 	}
 
-	cmd := exec.CommandContext(ctx, cmdName, "--version")
+	cmd := shellenv.CommandContext(ctx, cmdName+" --version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("command not found or not in PATH")

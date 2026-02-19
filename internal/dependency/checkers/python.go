@@ -3,12 +3,12 @@ package checkers
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/Maycon-Santos/relief/pkg/fileutil"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/shellenv"
 )
 
 type PythonChecker struct {
@@ -33,7 +33,7 @@ func (c *PythonChecker) Check(ctx context.Context) (string, error) {
 	}
 
 	for _, pythonCmd := range pythonCmds {
-		cmd := exec.CommandContext(ctx, pythonCmd, "--version")
+		cmd := shellenv.CommandContext(ctx, pythonCmd+" --version")
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			version := strings.TrimSpace(string(output))
@@ -62,7 +62,6 @@ func (c *PythonChecker) Install(ctx context.Context, version string) error {
 
 	c.path = depsDir
 
-
 	c.logger.Info("Python instalação completa", map[string]interface{}{
 		"version": version,
 		"path":    depsDir,
@@ -74,7 +73,7 @@ func (c *PythonChecker) Install(ctx context.Context, version string) error {
 func (c *PythonChecker) GetPath() string {
 	if c.path == "" {
 		for _, cmd := range []string{"python3", "python"} {
-			path, err := exec.LookPath(cmd)
+			path, err := shellenv.LookPath(cmd)
 			if err == nil {
 				return filepath.Dir(path)
 			}

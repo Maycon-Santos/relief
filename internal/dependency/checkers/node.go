@@ -3,12 +3,12 @@ package checkers
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/Maycon-Santos/relief/pkg/fileutil"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/shellenv"
 )
 
 type NodeChecker struct {
@@ -28,7 +28,7 @@ func (c *NodeChecker) Check(ctx context.Context) (string, error) {
 		nodeCmd = filepath.Join(c.path, "node")
 	}
 
-	cmd := exec.CommandContext(ctx, nodeCmd, "-v")
+	cmd := shellenv.CommandContext(ctx, nodeCmd+" -v")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("node not found: %w", err)
@@ -52,7 +52,6 @@ func (c *NodeChecker) Install(ctx context.Context, version string) error {
 
 	c.path = depsDir
 
-
 	c.logger.Info("Node.js installation complete", map[string]interface{}{
 		"version": version,
 		"path":    depsDir,
@@ -63,7 +62,7 @@ func (c *NodeChecker) Install(ctx context.Context, version string) error {
 
 func (c *NodeChecker) GetPath() string {
 	if c.path == "" {
-		path, err := exec.LookPath("node")
+		path, err := shellenv.LookPath("node")
 		if err == nil {
 			return filepath.Dir(path)
 		}

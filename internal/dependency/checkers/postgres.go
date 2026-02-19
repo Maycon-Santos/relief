@@ -3,11 +3,11 @@ package checkers
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/shellenv"
 )
 
 type PostgresChecker struct {
@@ -27,7 +27,7 @@ func (c *PostgresChecker) Check(ctx context.Context) (string, error) {
 		psqlCmd = filepath.Join(c.path, "psql")
 	}
 
-	cmd := exec.CommandContext(ctx, psqlCmd, "--version")
+	cmd := shellenv.CommandContext(ctx, psqlCmd+" --version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("postgres não encontrado: %w", err)
@@ -57,13 +57,12 @@ func (c *PostgresChecker) Install(ctx context.Context, version string) error {
 		"version": version,
 	})
 
-
 	return fmt.Errorf("instalação automática de PostgreSQL ainda não implementada - use Docker ou instale manualmente")
 }
 
 func (c *PostgresChecker) GetPath() string {
 	if c.path == "" {
-		path, err := exec.LookPath("psql")
+		path, err := shellenv.LookPath("psql")
 		if err == nil {
 			return filepath.Dir(path)
 		}
