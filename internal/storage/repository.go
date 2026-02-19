@@ -403,3 +403,11 @@ func (r *LogRepository) DeleteOldLogs(olderThan time.Time) error {
 	_, err := r.db.conn.Exec(query, olderThan)
 	return err
 }
+
+func (r *LogRepository) DeleteByProjectID(projectID string) error {
+	_, err := r.db.conn.Exec(`DELETE FROM logs WHERE project_id = ?`, projectID)
+	if err != nil {
+		return fmt.Errorf("erro ao limpar logs do projeto: %w", err)
+	}
+	return nil
+}

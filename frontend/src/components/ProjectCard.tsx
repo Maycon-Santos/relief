@@ -69,11 +69,17 @@ export function ProjectCard({
 
 	const _unsatisfiedDeps = project.dependencies.filter((d) => !d.satisfied);
 	const isRunning = project.status === "running";
-	const isStopped = project.status === "stopped";
+	const isStartable = project.status === "stopped" || project.status === "error";
 
 	const getStatusBadge = () => {
 		if (isRunning) {
 			return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Running</Badge>;
+		}
+		if (project.status === "starting") {
+			return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Starting</Badge>;
+		}
+		if (project.status === "error") {
+			return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Error</Badge>;
 		}
 		return (
 			<Badge variant="secondary" className="text-gray-400 bg-zinc-800/50">
@@ -150,7 +156,7 @@ export function ProjectCard({
 
 			<CardFooter className="bg-zinc-900/80 border-t border-zinc-800 px-4 py-3">
 				<div className="flex items-center gap-2 w-full flex-wrap">
-					{isStopped && (
+					{isStartable && (
 						<Button
 							onClick={() => handleAction(onStart, "iniciar", true)}
 							disabled={loading}

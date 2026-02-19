@@ -34,10 +34,10 @@ export function LogsViewer({ projectId, projectName, onClose }: LogsViewerProps)
 	}, [projectId]);
 
 	useEffect(() => {
-		if (autoScroll) {
+		if (autoScroll && logs.length > 0) {
 			logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
 		}
-	}, [autoScroll]);
+	}, [logs.length, autoScroll]);
 
 	const getLevelConfig = (level: string) => {
 		const normalizedLevel = level.toLowerCase();

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/Maycon-Santos/relief/pkg/fileutil"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 //go:embed migrations/*.sql
@@ -28,12 +28,14 @@ func NewDB(log *logger.Logger) (*DB, error) {
 
 	dbPath := filepath.Join(dataDir, "orchestrator.db")
 
-	conn, err := sql.Open("sqlite3", dbPath)
+	dsn := fmt.Sprintf("file:%s?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL", dbPath)
+
+	conn, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao abrir banco de dados: %w", err)
 	}
 
-	conn.SetMaxOpenConns(25)
+	conn.SetMaxOpenConns(10)
 	conn.SetMaxIdleConns(5)
 
 	if err := conn.Ping(); err != nil {

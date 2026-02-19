@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,11 +16,19 @@ import (
 	"github.com/Maycon-Santos/relief/pkg/logger"
 )
 
+type LogFunc func(level, message string)
+
+type StatusFunc func(projectID string, status domain.Status, lastError string)
+
 type NativeRunner struct {
 	*BaseRunner
-	processes map[string]*ProcessInfo
-	mu        sync.RWMutex
-	logger    *logger.Logger
+	processes       map[string]*ProcessInfo
+	mu              sync.RWMutex
+	logger          *logger.Logger
+	logCallbacks    map[string]LogFunc
+	cbMu            sync.RWMutex
+	statusCallbacks map[string]StatusFunc
+	stMu            sync.RWMutex
 }
 
 type ProcessInfo struct {
@@ -34,10 +43,51 @@ type ProcessInfo struct {
 
 func NewNativeRunner(log *logger.Logger) *NativeRunner {
 	return &NativeRunner{
-		BaseRunner: NewBaseRunner(RunnerTypeNative),
-		processes:  make(map[string]*ProcessInfo),
-		logger:     log,
+		BaseRunner:      NewBaseRunner(RunnerTypeNative),
+		processes:       make(map[string]*ProcessInfo),
+		logger:          log,
+		logCallbacks:    make(map[string]LogFunc),
+		statusCallbacks: make(map[string]StatusFunc),
 	}
+}
+
+// SetLogCallback registra um callback que receberá cada linha de log do processo.
+// Deve ser chamado antes de Start. É seguro para uso concorrente.
+func (r *NativeRunner) SetLogCallback(projectID string, fn LogFunc) {
+	r.cbMu.Lock()
+	defer r.cbMu.Unlock()
+	r.logCallbacks[projectID] = fn
+}
+
+func (r *NativeRunner) removeLogCallback(projectID string) {
+	r.cbMu.Lock()
+	defer r.cbMu.Unlock()
+	delete(r.logCallbacks, projectID)
+}
+
+func (r *NativeRunner) getLogCallback(projectID string) LogFunc {
+	r.cbMu.RLock()
+	defer r.cbMu.RUnlock()
+	return r.logCallbacks[projectID]
+}
+
+// SetStatusCallback registra um callback chamado quando o processo encerra (com ou sem erro).
+func (r *NativeRunner) SetStatusCallback(projectID string, fn StatusFunc) {
+	r.stMu.Lock()
+	defer r.stMu.Unlock()
+	r.statusCallbacks[projectID] = fn
+}
+
+func (r *NativeRunner) removeStatusCallback(projectID string) {
+	r.stMu.Lock()
+	defer r.stMu.Unlock()
+	delete(r.statusCallbacks, projectID)
+}
+
+func (r *NativeRunner) getStatusCallback(projectID string) StatusFunc {
+	r.stMu.RLock()
+	defer r.stMu.RUnlock()
+	return r.statusCallbacks[projectID]
 }
 
 func (r *NativeRunner) Start(ctx context.Context, project *domain.Project) error {
@@ -48,13 +98,17 @@ func (r *NativeRunner) Start(ctx context.Context, project *domain.Project) error
 		return fmt.Errorf("projeto %s já está em execução", project.Name)
 	}
 
-	if project.Manifest == nil {
-		return fmt.Errorf("manifest não carregado para o projeto %s", project.Name)
+	// Obtém o script dev — prefere o manifest, usa project.Scripts como fallback
+	// (projetos configurados via config global não precisam ter relief.yaml)
+	var devScript string
+	if project.Manifest != nil {
+		devScript = project.Manifest.GetDevScript()
 	}
-
-	devScript := project.Manifest.GetDevScript()
 	if devScript == "" {
-		return fmt.Errorf("script 'dev' não encontrado no manifest")
+		devScript = project.Scripts["dev"]
+	}
+	if devScript == "" {
+		return fmt.Errorf("script 'dev' não encontrado no projeto %s", project.Name)
 	}
 
 	r.logger.Info("Starting project with script", map[string]interface{}{
@@ -158,6 +212,8 @@ func (r *NativeRunner) Stop(ctx context.Context, projectID string) error {
 	}
 
 	delete(r.processes, projectID)
+	r.removeLogCallback(projectID)
+	r.removeStatusCallback(projectID)
 
 	r.logger.Info("Projeto parado", map[string]interface{}{
 		"project": processInfo.Project.Name,
@@ -209,18 +265,21 @@ func (r *NativeRunner) Restart(ctx context.Context, project *domain.Project) err
 func (r *NativeRunner) captureOutput(projectID string, reader io.ReadCloser, level string) {
 	defer reader.Close()
 
-	buf := make([]byte, 1024)
+	buf := make([]byte, 4096)
 	for {
 		n, err := reader.Read(buf)
 		if n > 0 {
-			message := string(buf[:n])
-			message = strings.TrimSpace(message)
+			message := strings.TrimSpace(string(buf[:n]))
 			if message != "" {
 				r.AddLog(projectID, level, message)
+				if fn := r.getLogCallback(projectID); fn != nil {
+					fn(level, message)
+				}
 			}
 		}
 		if err != nil {
-			if err != io.EOF {
+			// io.EOF e pipe fechado (processo encerrou) são encerramentos normais.
+			if err != io.EOF && !errors.Is(err, os.ErrClosed) && !strings.Contains(err.Error(), "file already closed") {
 				r.logger.Error("Erro ao ler output", err, map[string]interface{}{
 					"project_id": projectID,
 				})
@@ -256,12 +315,29 @@ func (r *NativeRunner) monitorProcess(projectID string) {
 			"exit_code": exitCode,
 		})
 
-		r.AddLog(projectID, "error", fmt.Sprintf("Processo terminou com código %d", exitCode))
+		msg := fmt.Sprintf("Processo terminou com código %d", exitCode)
+		r.AddLog(projectID, "error", msg)
+		if fn := r.getLogCallback(projectID); fn != nil {
+			fn("error", msg)
+		}
+		if fn := r.getStatusCallback(projectID); fn != nil {
+			fn(projectID, domain.StatusError, msg)
+		}
 	} else {
 		r.logger.Info("Processo terminou", map[string]interface{}{
 			"project": processInfo.Project.Name,
 		})
+		msg := "Processo encerrado normalmente"
+		r.AddLog(projectID, "info", msg)
+		if fn := r.getLogCallback(projectID); fn != nil {
+			fn("info", msg)
+		}
+		if fn := r.getStatusCallback(projectID); fn != nil {
+			fn(projectID, domain.StatusStopped, "")
+		}
 	}
+	r.removeLogCallback(projectID)
+	r.removeStatusCallback(projectID)
 }
 
 func (r *NativeRunner) GetRunningProcesses() []string {

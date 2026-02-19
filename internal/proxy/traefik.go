@@ -6,12 +6,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/Maycon-Santos/relief/internal/domain"
 	"github.com/Maycon-Santos/relief/pkg/fileutil"
@@ -212,9 +214,22 @@ func (t *TraefikManager) generateConfig() error {
 }
 
 func (t *TraefikManager) IsRunning() bool {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.running
+	addr := fmt.Sprintf(":%d", t.httpPort)
+	conn, err := net.DialTimeout("tcp", addr, time.Second)
+	if err != nil {
+		t.mu.Lock()
+		t.running = false
+		t.mu.Unlock()
+		return false
+	}
+	conn.Close()
+	return true
+}
+
+func (t *TraefikManager) Restart(ctx context.Context) error {
+	t.logger.Info("Reiniciando Traefik", nil)
+	_ = t.Stop()
+	return t.Start(ctx)
 }
 
 func (t *TraefikManager) GetConfigPath() string {

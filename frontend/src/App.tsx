@@ -1,5 +1,5 @@
 import { Folder, Loader2, Package, Plus, RefreshCw, Settings, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -60,6 +60,17 @@ function App() {
 		return () => clearInterval(interval);
 	}, []);
 
+	const prevStatusesRef = useRef<Record<string, string>>({});
+	useEffect(() => {
+		const prev = prevStatusesRef.current;
+		for (const project of projects) {
+			if (project.status === "error" && prev[project.id] && prev[project.id] !== "error") {
+				setSelectedProjectId(project.id);
+			}
+		}
+		prevStatusesRef.current = Object.fromEntries(projects.map((p) => [p.id, p.status]));
+	}, [projects]);
+
 	const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
 	const handleAddProject = async () => {
@@ -92,6 +103,25 @@ function App() {
 			console.error("Error stopping service:", err);
 			throw err;
 		}
+	};
+
+	const handleRestartTraefik = async () => {
+		try {
+			await api.restartTraefik();
+			const data = await api.getStatus();
+			setStatus(data);
+		} catch (err) {
+			console.error("Error restarting traefik:", err);
+		}
+	};
+
+	const handleRefresh = async () => {
+		try {
+			await api.reloadConfig();
+		} catch (err) {
+			console.error("Error reloading config:", err);
+		}
+		refresh();
 	};
 
 	return (
@@ -129,7 +159,7 @@ function App() {
 								Add Project
 							</Button>
 							<Button
-								onClick={refresh}
+							onClick={handleRefresh}
 								disabled={loading}
 								variant="outline"
 								size="default"
@@ -174,6 +204,15 @@ function App() {
 									>
 										{status.traefik_running ? "Active" : "Inactive"}
 									</Badge>
+									{!status.traefik_running && (
+										<button
+											type="button"
+											onClick={handleRestartTraefik}
+											className="text-xs text-yellow-400 underline hover:text-yellow-300 transition-colors"
+										>
+											Fix
+										</button>
+									)}
 								</div>
 							</div>
 						</Card>

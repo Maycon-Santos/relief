@@ -179,8 +179,6 @@ func (a *App) StartProject(id string) error {
 
 	a.logger.Info("Iniciando projeto", map[string]interface{}{"id": id})
 
-	// logStartError persiste o erro no logRepo antes de retornar, garantindo que
-	// o LogsViewer mostre a causa da falha mesmo quando o processo nunca chegou a subir.
 	logStartError := func(err error) error {
 		if a.logRepo != nil {
 			_ = a.logRepo.Create(&domain.LogEntry{
@@ -203,22 +201,47 @@ func (a *App) StartProject(id string) error {
 	}
 
 	if project.Manifest == nil {
-		a.logger.Warn("Manifest not loaded, attempting to load", map[string]interface{}{
-			"project": project.Name,
-			"path":    project.Path,
-		})
 		manifest, err := domain.ParseManifest(pathutil.FromRelativeHome(project.Path))
 		if err != nil {
-			return logStartError(fmt.Errorf("erro ao carregar manifest: %w", err))
+			a.logger.Warn("relief.yaml não encontrado, tentando reidratar da config global", map[string]interface{}{
+				"project": project.Name,
+			})
+			for _, pc := range a.config.Projects {
+				if pc.Name == project.Name {
+					a.updateProjectFromConfig(project, pc)
+					break
+				}
+			}
+			if project.Scripts["dev"] == "" {
+				return logStartError(fmt.Errorf("script 'dev' não encontrado para o projeto '%s' (sem relief.yaml e sem config global)", project.Name))
+			}
+		} else {
+			project.Manifest = manifest
 		}
-		project.Manifest = manifest
+	}
+
+	project.ClearError()
+	_ = a.projectRepo.Update(project)
+
+	if a.logRepo != nil {
+		_ = a.logRepo.DeleteByProjectID(id)
 	}
 
 	if err := a.dependencyMgr.CheckDependencies(a.ctx, project); err != nil {
 		return logStartError(fmt.Errorf("erro ao verificar dependências: %w", err))
 	}
 
-	if err := a.enhancedDepMgr.StartManagedDependencies(a.ctx, project); err != nil {
+	depLogFn := func(level, message string) {
+		if a.logRepo != nil {
+			_ = a.logRepo.Create(&domain.LogEntry{
+				ProjectID: id,
+				Level:     level,
+				Message:   message,
+				Timestamp: time.Now().Format(time.RFC3339),
+			})
+		}
+	}
+	if err := a.enhancedDepMgr.StartManagedDependencies(a.ctx, project, depLogFn); err != nil {
 		return logStartError(fmt.Errorf("erro ao iniciar dependências gerenciadas: %w", err))
 	}
 
@@ -239,7 +262,7 @@ func (a *App) StartProject(id string) error {
 				"error": err.Error(),
 			})
 		} else if conflict != nil {
-			// PORT_IN_USE é tratado pelo PortConflictModal — não grava como log
+
 			return fmt.Errorf("PORT_IN_USE:%d:%d:%s", conflict.Port, conflict.PID, conflict.Command)
 		}
 	}
@@ -247,6 +270,35 @@ func (a *App) StartProject(id string) error {
 	projectRunner, err := a.runnerFactory.CreateRunner(project)
 	if err != nil {
 		return logStartError(fmt.Errorf("erro ao criar runner: %w", err))
+	}
+
+	if nativeRunner, ok := projectRunner.(*runner.NativeRunner); ok {
+		if a.logRepo != nil {
+			nativeRunner.SetLogCallback(id, func(level, message string) {
+				_ = a.logRepo.Create(&domain.LogEntry{
+					ProjectID: id,
+					Level:     level,
+					Message:   message,
+					Timestamp: time.Now().Format(time.RFC3339),
+				})
+			})
+		}
+
+		nativeRunner.SetStatusCallback(id, func(projectID string, status domain.Status, lastError string) {
+			p, err := a.projectRepo.GetByID(projectID)
+			if err != nil {
+				a.logger.Warn("StatusCallback: projeto não encontrado", map[string]interface{}{"id": projectID})
+				return
+			}
+			if lastError != "" {
+				p.SetError(fmt.Errorf("%s", lastError))
+			} else {
+				p.UpdateStatus(status)
+			}
+			_ = a.projectRepo.Update(p)
+
+			delete(a.runners, projectID)
+		})
 	}
 
 	a.logger.Info("Runner created successfully", map[string]interface{}{
@@ -313,7 +365,8 @@ func (a *App) StopProject(id string) error {
 		a.traefikMgr.RemoveProject(id)
 	}
 
-	if err := a.enhancedDepMgr.StopManagedDependencies(a.ctx, project); err != nil {
+	depsInUse := a.getDepsInUseByOtherProjects(id)
+	if err := a.enhancedDepMgr.StopManagedDependencies(a.ctx, project, depsInUse); err != nil {
 		a.logger.Warn("Erro ao parar dependências gerenciadas", map[string]interface{}{
 			"project": project.Name,
 			"error":   err.Error(),
@@ -450,6 +503,24 @@ func (a *App) GetStatus() (map[string]interface{}, error) {
 	}, nil
 }
 
+func (a *App) RestartTraefik() error {
+	if a.traefikMgr == nil {
+		return fmt.Errorf("traefik não inicializado")
+	}
+	a.logger.Info("Reiniciando Traefik via UI", nil)
+	if err := a.traefikMgr.Restart(a.ctx); err != nil {
+		return fmt.Errorf("erro ao reiniciar Traefik: %w", err)
+	}
+
+	projects, _ := a.projectRepo.List()
+	for _, p := range projects {
+		if p.IsRunning() && p.Domain != "" {
+			a.traefikMgr.AddProject(p)
+		}
+	}
+	return nil
+}
+
 func (a *App) SelectProjectDirectory() (string, error) {
 	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Select Project Directory",
@@ -472,7 +543,7 @@ func (a *App) cleanupOrphanProcesses() {
 	}
 
 	for _, project := range projects {
-		cleaned := false
+		needsReset := false
 
 		if project.PID > 0 {
 			a.logger.Info("Encontrado processo órfão com PID registrado", map[string]interface{}{
@@ -482,18 +553,17 @@ func (a *App) cleanupOrphanProcesses() {
 			})
 
 			if err := a.KillProcessByPID(project.PID); err != nil {
-				a.logger.Warn("Erro ao matar processo órfão", map[string]interface{}{
+				a.logger.Info("Processo já encerrado (PID inexistente), resetando status", map[string]interface{}{
 					"project": project.Name,
 					"pid":     project.PID,
-					"error":   err.Error(),
 				})
 			} else {
 				a.logger.Info("Processo órfão encerrado", map[string]interface{}{
 					"project": project.Name,
 					"pid":     project.PID,
 				})
-				cleaned = true
 			}
+			needsReset = true
 		}
 
 		if project.Port > 0 {
@@ -519,19 +589,32 @@ func (a *App) cleanupOrphanProcesses() {
 						"port":    project.Port,
 						"pid":     conflict.PID,
 					})
-					cleaned = true
+					needsReset = true
 				}
 			}
 		}
 
-		if cleaned {
+		if !needsReset && (project.Status == domain.StatusError || project.Status == domain.StatusStarting || project.LastError != "") {
+			a.logger.Info("Resetando status transiente entre sessões", map[string]interface{}{
+				"project": project.Name,
+				"status":  project.Status,
+			})
+			needsReset = true
+		}
+
+		if needsReset {
 			project.PID = 0
+			project.ClearError()
 			project.UpdateStatus(domain.StatusStopped)
 			if err := a.projectRepo.Update(project); err != nil {
 				a.logger.Warn("Erro ao atualizar projeto após limpeza", map[string]interface{}{
 					"project": project.Name,
 					"error":   err.Error(),
 				})
+			}
+
+			if a.logRepo != nil {
+				_ = a.logRepo.DeleteByProjectID(project.ID)
 			}
 		}
 	}
@@ -618,15 +701,10 @@ func (a *App) syncConfigProjects() {
 	}
 }
 
-// runProjectSetupHooks executa automaticamente os hooks configurados no ProjectConfig:
-//   - setup_env: grava/atualiza o .env do projeto com as variáveis do config
-//   - auto_install: executa o script "install" (ex.: npm ci, yarn install)
-//   - auto_migrate: executa o script "migration:run"
 func (a *App) runProjectSetupHooks(project *domain.Project, cfg config.ProjectConfig) {
 	if cfg.SetupEnv {
 		a.logger.Info("Executando setup_env para projeto", map[string]interface{}{"project": project.Name})
-		// Usa cfg.Env diretamente (valores frescos do config YAML) para evitar
-		// leitura de um Env desatualizado do banco no momento da sincronização.
+
 		if err := a.writeEnvFile(project.Path, project.Name, cfg.Env); err != nil {
 			a.logger.Warn("Erro no setup_env", map[string]interface{}{
 				"project": project.Name,
@@ -656,18 +734,13 @@ func (a *App) runProjectSetupHooks(project *domain.Project, cfg config.ProjectCo
 	}
 }
 
-// resolveProjectPath resolve o path de um projeto para absoluto.
-// Se o path já for absoluto, retorna como está (após expandir ~/).
-// Se for relativo, combina com o workspace_path do config (se definido).
 func (a *App) resolveProjectPath(projectPath string) string {
 	expanded := pathutil.FromRelativeHome(projectPath)
 
-	// Já é absoluto
 	if strings.HasPrefix(expanded, "/") {
 		return expanded
 	}
 
-	// É relativo — combina com workspace_path
 	if a.config != nil && a.config.Environment.WorkspacePath != "" {
 		workspacePath := pathutil.FromRelativeHome(a.config.Environment.WorkspacePath)
 		return filepath.Join(workspacePath, expanded)
@@ -788,7 +861,17 @@ func (a *App) StartProjectDependencies(id string) error {
 		return fmt.Errorf("projeto não encontrado: %w", err)
 	}
 
-	return a.enhancedDepMgr.StartManagedDependencies(a.ctx, project)
+	depLogFn := func(level, message string) {
+		if a.logRepo != nil {
+			_ = a.logRepo.Create(&domain.LogEntry{
+				ProjectID: id,
+				Level:     level,
+				Message:   message,
+				Timestamp: time.Now().Format(time.RFC3339),
+			})
+		}
+	}
+	return a.enhancedDepMgr.StartManagedDependencies(a.ctx, project, depLogFn)
 }
 
 func (a *App) StopProjectDependencies(id string) error {
@@ -797,7 +880,28 @@ func (a *App) StopProjectDependencies(id string) error {
 		return fmt.Errorf("projeto não encontrado: %w", err)
 	}
 
-	return a.enhancedDepMgr.StopManagedDependencies(a.ctx, project)
+	depsInUse := a.getDepsInUseByOtherProjects(id)
+	return a.enhancedDepMgr.StopManagedDependencies(a.ctx, project, depsInUse)
+}
+
+func (a *App) getDepsInUseByOtherProjects(stoppingID string) map[string]bool {
+	inUse := map[string]bool{}
+	projects, err := a.projectRepo.List()
+	if err != nil {
+		a.logger.Warn("Não foi possível listar projetos para verificar dependências compartilhadas", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return inUse
+	}
+	for _, p := range projects {
+		if p.ID == stoppingID || p.Status != domain.StatusRunning {
+			continue
+		}
+		for _, dep := range p.Dependencies {
+			inUse[dep.Name] = true
+		}
+	}
+	return inUse
 }
 
 func (a *App) SyncRepository(id string) error {
@@ -921,6 +1025,22 @@ func (a *App) RunProjectScript(id string, scriptName string) error {
 		return fmt.Errorf("projeto não encontrado: %w", err)
 	}
 
+	if len(project.Scripts) == 0 {
+
+		manifest, err := domain.ParseManifest(pathutil.FromRelativeHome(project.Path))
+		if err != nil {
+			for _, pc := range a.config.Projects {
+				if pc.Name == project.Name {
+					a.updateProjectFromConfig(project, pc)
+					break
+				}
+			}
+		} else {
+			project.Manifest = manifest
+			project.Scripts = manifest.Scripts
+		}
+	}
+
 	script, exists := project.Scripts[scriptName]
 	if !exists {
 		return fmt.Errorf("script '%s' não encontrado no projeto '%s'", scriptName, project.Name)
@@ -934,7 +1054,8 @@ func (a *App) RunProjectScript(id string, scriptName string) error {
 
 	projectPath := pathutil.FromRelativeHome(project.Path)
 
-	cmd := exec.CommandContext(a.ctx, "sh", "-c", script)
+	wrappedScript := fmt.Sprintf(`set -a; [ -f .env ] && . .env; set +a; %s`, script)
+	cmd := exec.CommandContext(a.ctx, "sh", "-c", wrappedScript)
 	cmd.Dir = projectPath
 
 	cmd.Env = os.Environ()
@@ -956,9 +1077,6 @@ func (a *App) RunProjectScript(id string, scriptName string) error {
 	return nil
 }
 
-// SetupProjectEnv grava (ou atualiza) o arquivo .env do projeto com as variáveis
-// definidas em env: no config.yaml. Variáveis já existentes no .env que não
-// estejam no config são preservadas; as do config têm precedência.
 func (a *App) SetupProjectEnv(id string) error {
 	project, err := a.projectRepo.GetByID(id)
 	if err != nil {
@@ -968,14 +1086,10 @@ func (a *App) SetupProjectEnv(id string) error {
 	return a.writeEnvFile(project.Path, project.Name, project.Env)
 }
 
-// writeEnvFile escreve o arquivo .env no path do projeto, mesclando os valores
-// de configEnv (que têm precedência) com os valores pré-existentes no arquivo.
-// Chaves pré-existentes que não estejam no configEnv são preservadas.
 func (a *App) writeEnvFile(projectPath, projectName string, configEnv map[string]string) error {
 	resolvedPath := pathutil.FromRelativeHome(projectPath)
 	envPath := resolvedPath + "/.env"
 
-	// Lê chaves pré-existentes (ex.: segredos adicionados manualmente)
 	existing := make(map[string]string)
 	if data, readErr := os.ReadFile(envPath); readErr == nil {
 		for _, line := range strings.Split(string(data), "\n") {
@@ -990,7 +1104,6 @@ func (a *App) writeEnvFile(projectPath, projectName string, configEnv map[string
 		}
 	}
 
-	// Valores do config sempre têm precedência
 	for k, v := range configEnv {
 		existing[k] = v
 	}
@@ -1094,7 +1207,26 @@ func (a *App) SaveGlobalConfig(configYAML string) error {
 	})
 
 	a.config = &newConfig
+	a.syncConfigProjects()
 
+	return nil
+}
+
+func (a *App) ReloadConfig() error {
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		return fmt.Errorf("erro ao obter caminho da config: %w", err)
+	}
+
+	cfg, err := a.configLoader.LoadConfig("", configPath)
+	if err != nil {
+		return fmt.Errorf("erro ao recarregar configuração: %w", err)
+	}
+
+	a.config = cfg
+	a.syncConfigProjects()
+
+	a.logger.Info("Configuração recarregada", nil)
 	return nil
 }
 
