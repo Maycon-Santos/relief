@@ -19,5 +19,16 @@
   },
   "nsisType": "multiple",
   "assetdir": "frontend/dist",
-  "reloaddirs": "frontend/src"
+  "reloaddirs": "frontend/src",
+  "mac": {
+    "icon": "build/darwin/appicon.icns"
+  },
+  "windows": {
+    "icon": "build/appicon.ico",
+    "webviewIsTransparent": false,
+    "windowIsTranslucent": false
+  },
+  "linux": {
+    "icon": "build/appicon.png"
+  }
 }
