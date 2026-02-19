@@ -14,6 +14,7 @@ import (
 
 	"github.com/Maycon-Santos/relief/internal/domain"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/shellenv"
 )
 
 type LogFunc func(level, message string)
@@ -51,8 +52,6 @@ func NewNativeRunner(log *logger.Logger) *NativeRunner {
 	}
 }
 
-// SetLogCallback registra um callback que receberá cada linha de log do processo.
-// Deve ser chamado antes de Start. É seguro para uso concorrente.
 func (r *NativeRunner) SetLogCallback(projectID string, fn LogFunc) {
 	r.cbMu.Lock()
 	defer r.cbMu.Unlock()
@@ -71,7 +70,6 @@ func (r *NativeRunner) getLogCallback(projectID string) LogFunc {
 	return r.logCallbacks[projectID]
 }
 
-// SetStatusCallback registra um callback chamado quando o processo encerra (com ou sem erro).
 func (r *NativeRunner) SetStatusCallback(projectID string, fn StatusFunc) {
 	r.stMu.Lock()
 	defer r.stMu.Unlock()
@@ -98,8 +96,6 @@ func (r *NativeRunner) Start(ctx context.Context, project *domain.Project) error
 		return fmt.Errorf("projeto %s já está em execução", project.Name)
 	}
 
-	// Obtém o script dev — prefere o manifest, usa project.Scripts como fallback
-	// (projetos configurados via config global não precisam ter relief.yaml)
 	var devScript string
 	if project.Manifest != nil {
 		devScript = project.Manifest.GetDevScript()
@@ -121,7 +117,7 @@ func (r *NativeRunner) Start(ctx context.Context, project *domain.Project) error
 	cmd := exec.CommandContext(processCtx, "sh", "-c", devScript)
 	cmd.Dir = project.Path
 
-	cmd.Env = os.Environ()
+	cmd.Env = shellenv.EnrichedEnv()
 	for key, value := range project.Env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
@@ -278,7 +274,7 @@ func (r *NativeRunner) captureOutput(projectID string, reader io.ReadCloser, lev
 			}
 		}
 		if err != nil {
-			// io.EOF e pipe fechado (processo encerrou) são encerramentos normais.
+
 			if err != io.EOF && !errors.Is(err, os.ErrClosed) && !strings.Contains(err.Error(), "file already closed") {
 				r.logger.Error("Erro ao ler output", err, map[string]interface{}{
 					"project_id": projectID,

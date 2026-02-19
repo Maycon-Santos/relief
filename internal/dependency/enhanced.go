@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 	"time"
@@ -12,10 +11,11 @@ import (
 	"github.com/Maycon-Santos/relief/internal/config"
 	"github.com/Maycon-Santos/relief/internal/domain"
 	"github.com/Maycon-Santos/relief/pkg/logger"
+	"github.com/Maycon-Santos/relief/pkg/shellenv"
 )
 
-// LogFunc é uma função de callback usada para persistir entradas de log
-// no repositório do projeto (ex: SQLite → LogsViewer).
+
+
 type LogFunc func(level, message string)
 
 type EnhancedManager struct {
@@ -141,27 +141,22 @@ func (m *EnhancedManager) checkAndInstallDependency(ctx context.Context, name, v
 }
 
 func (m *EnhancedManager) checkDependency(ctx context.Context, name string) error {
+	var probe string
 	switch name {
 	case "postgres":
-		cmd := exec.CommandContext(ctx, "psql", "--version")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("postgres não encontrado: %w", err)
-		}
+		probe = "psql --version"
 	case "redis":
-		cmd := exec.CommandContext(ctx, "redis-cli", "--version")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("redis não encontrado: %w", err)
-		}
+		probe = "redis-cli --version"
 	case "mongodb":
-		cmd := exec.CommandContext(ctx, "mongosh", "--version")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("mongodb não encontrado: %w", err)
-		}
+		probe = "mongosh --version"
 	case "localstack":
-		cmd := exec.CommandContext(ctx, "localstack", "--version")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("localstack não encontrado: %w", err)
-		}
+		probe = "localstack --version"
+	default:
+		return nil
+	}
+	cmd := shellenv.CommandContext(ctx, probe)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s não encontrado: %w", name, err)
 	}
 	return nil
 }
@@ -183,8 +178,7 @@ func (m *EnhancedManager) installDependency(ctx context.Context, name string, ma
 		logFn("info", fmt.Sprintf("[dep:%s] instalando: %s", name, managedDep.InstallCommand))
 	}
 
-	parts := strings.Fields(managedDep.InstallCommand)
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd := shellenv.CommandContext(ctx, managedDep.InstallCommand)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := fmt.Sprintf("[dep:%s] falha na instalação: %s\n%s", name, err.Error(), strings.TrimSpace(string(output)))
@@ -221,8 +215,9 @@ func (m *EnhancedManager) startService(ctx context.Context, name string, managed
 		logFn("info", fmt.Sprintf("[dep:%s] iniciando: %s", name, managedDep.StartCommand))
 	}
 
-	// Executa via sh -c para suportar operadores shell (&, >, |, &&, etc.)
-	cmd := exec.CommandContext(ctx, "sh", "-c", managedDep.StartCommand)
+	
+	
+	cmd := shellenv.CommandContext(ctx, managedDep.StartCommand)
 
 	if len(managedDep.Environment) > 0 {
 		cmd.Env = os.Environ()
@@ -253,7 +248,7 @@ func (m *EnhancedManager) startService(ctx context.Context, name string, managed
 	if managedDep.PostStartCommand != "" {
 		postCmd := managedDep.PostStartCommand
 		go func() {
-			out, err := exec.Command("sh", "-c", postCmd).CombinedOutput()
+			out, err := shellenv.Command(postCmd).CombinedOutput()
 			if err != nil {
 				m.logger.Warn("post_start_command falhou", map[string]interface{}{
 					"service": name,
@@ -288,8 +283,7 @@ func (m *EnhancedManager) stopService(ctx context.Context, name string, managedD
 		"command": managedDep.StopCommand,
 	})
 
-	parts := strings.Fields(managedDep.StopCommand)
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd := shellenv.CommandContext(ctx, managedDep.StopCommand)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("erro ao parar serviço: %w (output: %s)", err, string(output))
@@ -321,7 +315,7 @@ func (m *EnhancedManager) initializeDatabases(ctx context.Context, serviceName s
 			createCmd = fmt.Sprintf("CREATE DATABASE %s OWNER %s;", db.Name, db.Owner)
 		}
 
-		cmd := exec.CommandContext(ctx, "psql", "-U", "postgres", "-c", createCmd)
+		cmd := shellenv.CommandContext(ctx, fmt.Sprintf("psql -U postgres -c %q", createCmd))
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			if strings.Contains(string(output), "already exists") {
@@ -397,8 +391,7 @@ func (m *EnhancedManager) performHealthCheck(ctx context.Context, serviceName st
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	parts := strings.Fields(healthCheck.Command)
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd := shellenv.CommandContext(ctx, healthCheck.Command)
 
 	if err := cmd.Run(); err != nil {
 		m.logger.Warn("Health check falhou", map[string]interface{}{
@@ -412,7 +405,7 @@ func (m *EnhancedManager) performHealthCheck(ctx context.Context, serviceName st
 	}
 }
 
-// GetManagedServices retorna a lista de todos os serviços gerenciados disponíveis
+
 func (m *EnhancedManager) GetManagedServices() []ManagedServiceInfo {
 	names := make([]string, 0, len(m.config.ManagedDependencies))
 	for name := range m.config.ManagedDependencies {
@@ -434,7 +427,7 @@ func (m *EnhancedManager) GetManagedServices() []ManagedServiceInfo {
 	return services
 }
 
-// checkServiceStatus verifica se um serviço está realmente rodando no sistema
+
 func (m *EnhancedManager) checkServiceStatus(serviceName string) bool {
 	switch serviceName {
 	case "postgres":
@@ -450,9 +443,9 @@ func (m *EnhancedManager) checkServiceStatus(serviceName string) bool {
 	}
 }
 
-// checkBrewService verifica se um serviço do homebrew está rodando
+
 func (m *EnhancedManager) checkBrewService(serviceName string) bool {
-	cmd := exec.Command("brew", "services", "list")
+	cmd := shellenv.Command("brew services list")
 	output, err := cmd.Output()
 	if err != nil {
 		return false
@@ -468,7 +461,7 @@ func (m *EnhancedManager) checkBrewService(serviceName string) bool {
 }
 
 func (m *EnhancedManager) checkLocalstackStatus() bool {
-	cmd := exec.Command("curl", "-sf", "--max-time", "2", "http://localhost:4566/_localstack/health")
+	cmd := shellenv.Command("curl -sf --max-time 2 http://localhost:4566/_localstack/health")
 	err := cmd.Run()
 	return err == nil
 }
