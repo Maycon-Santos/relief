@@ -78,6 +78,10 @@ export const api = {
     return await App.RefreshProjectGitInfo(id);
   },
 
+  async quit(): Promise<void> {
+    return await App.Quit();
+  },
+
   async getManagedServices(): Promise<
     Array<{ name: string; running: boolean }>
   > {

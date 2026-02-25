@@ -1,4 +1,4 @@
-import { Folder, Loader2, Package, Plus, RefreshCw, Settings, Zap } from "lucide-react";
+import { Folder, Loader2, Package, Plus, Power, RefreshCw, Settings, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -167,6 +167,15 @@ function App() {
 							>
 								<RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
 								Refresh
+							</Button>
+							<Button
+								onClick={() => api.quit()}
+								variant="outline"
+								size="default"
+								title="Encerrar o Relief (para todos os projetos)"
+								className="border-zinc-700 text-red-400 hover:bg-red-900/20 hover:text-red-300 hover:border-red-700 transition-colors"
+							>
+								<Power className="h-4 w-4" />
 							</Button>
 						</div>
 					</div>

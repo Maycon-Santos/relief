@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Maycon-Santos/relief/internal/config"
@@ -14,11 +15,10 @@ import (
 	"github.com/Maycon-Santos/relief/pkg/shellenv"
 )
 
-
-
 type LogFunc func(level, message string)
 
 type EnhancedManager struct {
+	mu              sync.RWMutex
 	logger          *logger.Logger
 	config          *config.Config
 	runningServices map[string]bool
@@ -34,13 +34,25 @@ func NewEnhancedManager(log *logger.Logger, cfg *config.Config) *EnhancedManager
 	}
 }
 
+func (m *EnhancedManager) setRunning(name string, running bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.runningServices[name] = running
+}
+
+func (m *EnhancedManager) isRunning(name string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.runningServices[name]
+}
+
 func (m *EnhancedManager) StartManagedDependencies(ctx context.Context, project *domain.Project, logFn LogFunc) error {
 	for _, dep := range project.Dependencies {
 		if !dep.Managed {
 			continue
 		}
 
-		if m.runningServices[dep.Name] {
+		if m.isRunning(dep.Name) {
 			m.logger.Info("Dependência já está executando", map[string]interface{}{
 				"dependency": dep.Name,
 			})
@@ -76,9 +88,15 @@ func (m *EnhancedManager) StartManagedDependencies(ctx context.Context, project 
 			return fmt.Errorf("erro ao iniciar serviço %s: %w", dep.Name, err)
 		}
 
+		if err := m.waitForReady(dep.Name, managedDep); err != nil {
+			if logFn != nil {
+				logFn("warn", fmt.Sprintf("[dep:%s] serviço pode não estar pronto: %s", dep.Name, err.Error()))
+			}
+		}
+
 		m.startHealthCheck(ctx, dep.Name)
 
-		m.runningServices[dep.Name] = true
+		m.setRunning(dep.Name, true)
 	}
 
 	return nil
@@ -86,7 +104,7 @@ func (m *EnhancedManager) StartManagedDependencies(ctx context.Context, project 
 
 func (m *EnhancedManager) StopManagedDependencies(ctx context.Context, project *domain.Project, depsInUse map[string]bool) error {
 	for _, dep := range project.Dependencies {
-		if !dep.Managed || !m.runningServices[dep.Name] {
+		if !dep.Managed || !m.isRunning(dep.Name) {
 			continue
 		}
 
@@ -111,14 +129,31 @@ func (m *EnhancedManager) StopManagedDependencies(ctx context.Context, project *
 			})
 		}
 
-		m.runningServices[dep.Name] = false
+		m.setRunning(dep.Name, false)
 	}
 
 	return nil
 }
 
+// waitForReady polls the status_command until it exits 0, ensuring the service
+// is actually ready before we proceed (e.g. postgres accepting connections).
+func (m *EnhancedManager) waitForReady(name string, managedDep config.ManagedDependency) error {
+	if managedDep.StatusCommand == "" {
+		return nil
+	}
+	deadline := time.Now().Add(60 * time.Second)
+	for time.Now().Before(deadline) {
+		if shellenv.Command(managedDep.StatusCommand).Run() == nil {
+			m.logger.Info("Serviço pronto", map[string]interface{}{"service": name})
+			return nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return fmt.Errorf("serviço %s não ficou pronto em 60s", name)
+}
+
 func (m *EnhancedManager) checkAndInstallDependency(ctx context.Context, name, version string, managedDep config.ManagedDependency, logFn LogFunc) error {
-	if err := m.checkDependency(ctx, name); err != nil {
+	if err := m.checkDependency(ctx, name, managedDep); err != nil {
 		m.logger.Info("Dependência não encontrada, instalando...", map[string]interface{}{
 			"dependency": name,
 		})
@@ -140,21 +175,11 @@ func (m *EnhancedManager) checkAndInstallDependency(ctx context.Context, name, v
 	return nil
 }
 
-func (m *EnhancedManager) checkDependency(ctx context.Context, name string) error {
-	var probe string
-	switch name {
-	case "postgres":
-		probe = "psql --version"
-	case "redis":
-		probe = "redis-cli --version"
-	case "mongodb":
-		probe = "mongosh --version"
-	case "localstack":
-		probe = "localstack --version"
-	default:
+func (m *EnhancedManager) checkDependency(ctx context.Context, name string, managedDep config.ManagedDependency) error {
+	if managedDep.ProbeCommand == "" {
 		return nil
 	}
-	cmd := shellenv.CommandContext(ctx, probe)
+	cmd := shellenv.CommandContext(ctx, managedDep.ProbeCommand)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("%s não encontrado: %w", name, err)
 	}
@@ -215,8 +240,6 @@ func (m *EnhancedManager) startService(ctx context.Context, name string, managed
 		logFn("info", fmt.Sprintf("[dep:%s] iniciando: %s", name, managedDep.StartCommand))
 	}
 
-	
-	
 	cmd := shellenv.CommandContext(ctx, managedDep.StartCommand)
 
 	if len(managedDep.Environment) > 0 {
@@ -405,7 +428,6 @@ func (m *EnhancedManager) performHealthCheck(ctx context.Context, serviceName st
 	}
 }
 
-
 func (m *EnhancedManager) GetManagedServices() []ManagedServiceInfo {
 	names := make([]string, 0, len(m.config.ManagedDependencies))
 	for name := range m.config.ManagedDependencies {
@@ -416,7 +438,7 @@ func (m *EnhancedManager) GetManagedServices() []ManagedServiceInfo {
 	services := make([]ManagedServiceInfo, 0, len(names))
 	for _, name := range names {
 		running := m.checkServiceStatus(name)
-		m.runningServices[name] = running
+		m.setRunning(name, running)
 
 		services = append(services, ManagedServiceInfo{
 			Name:    name,
@@ -427,47 +449,17 @@ func (m *EnhancedManager) GetManagedServices() []ManagedServiceInfo {
 	return services
 }
 
-
 func (m *EnhancedManager) checkServiceStatus(serviceName string) bool {
-	switch serviceName {
-	case "postgres":
-		return m.checkBrewService("postgresql@16")
-	case "redis":
-		return m.checkBrewService("redis")
-	case "mongodb":
-		return m.checkBrewService("mongodb-community")
-	case "localstack":
-		return m.checkLocalstackStatus()
-	default:
-		return m.runningServices[serviceName]
+	dep, exists := m.config.ManagedDependencies[serviceName]
+	if !exists || dep.StatusCommand == "" {
+		return m.isRunning(serviceName)
 	}
-}
-
-
-func (m *EnhancedManager) checkBrewService(serviceName string) bool {
-	cmd := shellenv.Command("brew services list")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		if strings.Contains(line, serviceName) && strings.Contains(line, "started") {
-			return true
-		}
-	}
-	return false
-}
-
-func (m *EnhancedManager) checkLocalstackStatus() bool {
-	cmd := shellenv.Command("curl -sf --max-time 2 http://localhost:4566/_localstack/health")
-	err := cmd.Run()
-	return err == nil
+	cmd := shellenv.Command(dep.StatusCommand)
+	return cmd.Run() == nil
 }
 
 func (m *EnhancedManager) StartService(ctx context.Context, serviceName string) error {
-	if m.runningServices[serviceName] {
+	if m.isRunning(serviceName) {
 		return fmt.Errorf("serviço %s já está executando", serviceName)
 	}
 
@@ -480,14 +472,15 @@ func (m *EnhancedManager) StartService(ctx context.Context, serviceName string) 
 		return err
 	}
 
-	m.runningServices[serviceName] = true
+	_ = m.waitForReady(serviceName, managedDep)
+	m.setRunning(serviceName, true)
 	m.startHealthCheck(ctx, serviceName)
 
 	return nil
 }
 
 func (m *EnhancedManager) StopService(ctx context.Context, serviceName string) error {
-	if !m.runningServices[serviceName] {
+	if !m.isRunning(serviceName) {
 		return fmt.Errorf("serviço %s não está executando", serviceName)
 	}
 
@@ -502,7 +495,7 @@ func (m *EnhancedManager) StopService(ctx context.Context, serviceName string) e
 		return err
 	}
 
-	m.runningServices[serviceName] = false
+	m.setRunning(serviceName, false)
 
 	return nil
 }

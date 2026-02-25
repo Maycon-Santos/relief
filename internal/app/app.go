@@ -120,6 +120,15 @@ func (a *App) Startup(ctx context.Context) {
 	a.logger.Info("Relief Orchestrator started successfully", nil)
 }
 
+func (a *App) BeforeClose(ctx context.Context) bool {
+	runtime.WindowHide(ctx)
+	return true
+}
+
+func (a *App) Quit() {
+	runtime.Quit(a.ctx)
+}
+
 func (a *App) Shutdown(ctx context.Context) {
 	a.logger.Info("Shutting down Relief Orchestrator", nil)
 
@@ -754,16 +763,18 @@ func (a *App) ensureRepositoryCloned(projectConfig config.ProjectConfig) error {
 		return nil
 	}
 
+	resolvedPath := a.resolveProjectPath(projectConfig.Path)
+
 	a.logger.Info("Verificando repositório", map[string]interface{}{
 		"project": projectConfig.Name,
-		"path":    projectConfig.Path,
+		"path":    resolvedPath,
 		"repo":    projectConfig.Repository.URL,
 	})
 
 	return a.gitManager.CloneOrUpdate(
 		a.ctx,
 		projectConfig.Repository.URL,
-		projectConfig.Path,
+		resolvedPath,
 		projectConfig.Repository.Branch,
 	)
 }

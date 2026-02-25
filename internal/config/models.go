@@ -58,8 +58,10 @@ type DependencySpec struct {
 type ManagedDependency struct {
 	InstallCommand   string            `yaml:"install_command"`
 	StartCommand     string            `yaml:"start_command"`
-	PostStartCommand string            `yaml:"post_start_command,omitempty"`
 	StopCommand      string            `yaml:"stop_command"`
+	StatusCommand    string            `yaml:"status_command,omitempty"`
+	ProbeCommand     string            `yaml:"probe_command,omitempty"`
+	PostStartCommand string            `yaml:"post_start_command,omitempty"`
 	ConfigFile       string            `yaml:"config_file,omitempty"`
 	DataDir          string            `yaml:"data_dir,omitempty"`
 	InitDatabases    []DatabaseConfig  `yaml:"init_databases,omitempty"`
