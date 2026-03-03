@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Maycon-Santos/relief/internal/config"
@@ -37,11 +38,15 @@ type App struct {
 	gitManager     *git.Manager
 	traefikMgr     *proxy.TraefikManager
 	hostsMgr       *proxy.HostsManager
+	gitHeadCache   map[string]string
+	gitHeadMu      sync.RWMutex
+	cancelWatcher  context.CancelFunc
 }
 
 func NewApp() *App {
 	return &App{
-		runners: make(map[string]runner.ProjectRunner),
+		runners:      make(map[string]runner.ProjectRunner),
+		gitHeadCache: make(map[string]string),
 	}
 }
 
@@ -117,20 +122,21 @@ func (a *App) Startup(ctx context.Context) {
 
 	a.syncConfigProjects()
 
+	a.startGitHeadWatcher()
+
 	a.logger.Info("Relief Orchestrator started successfully", nil)
 }
 
 func (a *App) BeforeClose(ctx context.Context) bool {
-	runtime.WindowHide(ctx)
-	return true
-}
-
-func (a *App) Quit() {
-	runtime.Quit(a.ctx)
+	return false
 }
 
 func (a *App) Shutdown(ctx context.Context) {
 	a.logger.Info("Shutting down Relief Orchestrator", nil)
+
+	if a.cancelWatcher != nil {
+		a.cancelWatcher()
+	}
 
 	projects, _ := a.projectRepo.List()
 	for _, project := range projects {
@@ -486,7 +492,7 @@ func (a *App) RefreshConfig() error {
 }
 
 func (a *App) GetStatus() (map[string]interface{}, error) {
-	projects, _ := a.projectRepo.List()
+	projects, _ := a.projectRepo.ListLight()
 
 	running := 0
 	stopped := 0
@@ -812,10 +818,10 @@ func (a *App) createProjectFromConfig(projectConfig config.ProjectConfig) *domai
 	}
 
 	if a.gitManager != nil {
-		if gitInfo, err := a.gitManager.GetGitInfo(a.ctx, projectConfig.Path); err != nil {
+		if gitInfo, err := a.gitManager.GetGitInfo(a.ctx, resolvedPath); err != nil {
 			a.logger.Debug("Erro ao obter informações Git para projeto da config", map[string]interface{}{
 				"project": projectConfig.Name,
-				"path":    projectConfig.Path,
+				"path":    resolvedPath,
 				"error":   err.Error(),
 			})
 		} else {
@@ -854,10 +860,10 @@ func (a *App) updateProjectFromConfig(project *domain.Project, projectConfig con
 	}
 
 	if a.gitManager != nil {
-		if gitInfo, err := a.gitManager.GetGitInfo(a.ctx, projectConfig.Path); err != nil {
+		if gitInfo, err := a.gitManager.GetGitInfo(a.ctx, project.Path); err != nil {
 			a.logger.Debug("Erro ao obter informações Git para projeto atualizado", map[string]interface{}{
 				"project": projectConfig.Name,
-				"path":    projectConfig.Path,
+				"path":    project.Path,
 				"error":   err.Error(),
 			})
 		} else {
@@ -1310,4 +1316,185 @@ func (a *App) ExecuteGlobalScript(scriptName string) error {
 	})
 
 	return nil
+}
+
+// OpenProjectFolder abre a pasta do projeto no Finder (macOS) ou file manager do sistema.
+func (a *App) OpenProjectFolder(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	projectPath := pathutil.FromRelativeHome(project.Path)
+
+	cmd := exec.Command("open", projectPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("erro ao abrir pasta: %w (output: %s)", err, string(output))
+	}
+
+	return nil
+}
+
+// OpenProjectTerminal abre um terminal na pasta do projeto.
+func (a *App) OpenProjectTerminal(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	projectPath := pathutil.FromRelativeHome(project.Path)
+
+	cmd := exec.Command("open", "-a", "Terminal", projectPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("erro ao abrir terminal: %w (output: %s)", err, string(output))
+	}
+
+	return nil
+}
+
+// OpenProjectInEditor abre o projeto no editor preferido do usuário.
+func (a *App) OpenProjectInEditor(id string) error {
+	project, err := a.projectRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("projeto não encontrado: %w", err)
+	}
+
+	editor := "code"
+	if a.config != nil && a.config.Development.Editor != "" {
+		editor = a.config.Development.Editor
+	}
+
+	projectPath := pathutil.FromRelativeHome(project.Path)
+
+	a.logger.Info("Abrindo projeto no editor", map[string]interface{}{
+		"project": project.Name,
+		"editor":  editor,
+		"path":    projectPath,
+	})
+
+	cmd := exec.Command(editor, projectPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("erro ao abrir editor '%s': %w (output: %s)", editor, err, string(output))
+	}
+
+	return nil
+}
+
+// GetEditorConfig retorna o editor configurado.
+func (a *App) GetEditorConfig() string {
+	if a.config != nil && a.config.Development.Editor != "" {
+		return a.config.Development.Editor
+	}
+	return "code"
+}
+
+// SetEditorConfig altera o editor preferido e salva na configuração.
+func (a *App) SetEditorConfig(editor string) error {
+	if a.config == nil {
+		return fmt.Errorf("configuração não carregada")
+	}
+
+	a.config.Development.Editor = editor
+
+	configPath, err := config.GetConfigPath()
+	if err != nil {
+		return fmt.Errorf("erro ao obter caminho da config: %w", err)
+	}
+
+	data, err := yaml.Marshal(a.config)
+	if err != nil {
+		return fmt.Errorf("erro ao serializar config: %w", err)
+	}
+
+	relativeYAML := pathutil.ConvertYAMLPathsToRelative(string(data))
+
+	if err := os.WriteFile(configPath, []byte(relativeYAML), 0644); err != nil {
+		return fmt.Errorf("erro ao salvar config: %w", err)
+	}
+
+	a.logger.Info("Editor preferido atualizado", map[string]interface{}{
+		"editor": editor,
+	})
+
+	return nil
+}
+
+// startGitHeadWatcher inicia um goroutine que monitora mudanças nos arquivos .git/HEAD
+// dos projetos e emite eventos Wails quando a branch muda.
+func (a *App) startGitHeadWatcher() {
+	watchCtx, cancel := context.WithCancel(a.ctx)
+	a.cancelWatcher = cancel
+
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+
+		// Inicializar cache lendo os .git/HEAD atuais
+		a.refreshGitHeadCache()
+
+		for {
+			select {
+			case <-watchCtx.Done():
+				return
+			case <-ticker.C:
+				a.checkGitHeadChanges()
+			}
+		}
+	}()
+}
+
+func (a *App) refreshGitHeadCache() {
+	projects, err := a.projectRepo.ListLight()
+	if err != nil {
+		return
+	}
+
+	a.gitHeadMu.Lock()
+	defer a.gitHeadMu.Unlock()
+
+	for _, p := range projects {
+		headPath := filepath.Join(p.Path, ".git", "HEAD")
+		if data, err := os.ReadFile(headPath); err == nil {
+			a.gitHeadCache[p.ID] = strings.TrimSpace(string(data))
+		}
+	}
+}
+
+func (a *App) checkGitHeadChanges() {
+	projects, err := a.projectRepo.ListLight()
+	if err != nil {
+		return
+	}
+
+	a.gitHeadMu.Lock()
+	defer a.gitHeadMu.Unlock()
+
+	for _, p := range projects {
+		headPath := filepath.Join(p.Path, ".git", "HEAD")
+		data, err := os.ReadFile(headPath)
+		if err != nil {
+			continue
+		}
+
+		currentHead := strings.TrimSpace(string(data))
+		cachedHead, exists := a.gitHeadCache[p.ID]
+
+		if !exists || currentHead != cachedHead {
+			a.gitHeadCache[p.ID] = currentHead
+
+			// Extrair nome da branch do conteúdo do HEAD
+			branch := currentHead
+			if strings.HasPrefix(currentHead, "ref: refs/heads/") {
+				branch = strings.TrimPrefix(currentHead, "ref: refs/heads/")
+			}
+
+			if exists {
+				// Só emite evento se não é a primeira leitura
+				runtime.EventsEmit(a.ctx, "git:branch-changed", map[string]interface{}{
+					"projectId": p.ID,
+					"branch":    branch,
+				})
+			}
+		}
+	}
 }

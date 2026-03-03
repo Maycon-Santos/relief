@@ -78,10 +78,6 @@ export const api = {
     return await App.RefreshProjectGitInfo(id);
   },
 
-  async quit(): Promise<void> {
-    return await App.Quit();
-  },
-
   async getManagedServices(): Promise<
     Array<{ name: string; running: boolean }>
   > {
@@ -126,5 +122,25 @@ export const api = {
 
   async reloadConfig(): Promise<void> {
     return await App.ReloadConfig();
+  },
+
+  async openProjectFolder(id: string): Promise<void> {
+    return await App.OpenProjectFolder(id);
+  },
+
+  async openProjectTerminal(id: string): Promise<void> {
+    return await App.OpenProjectTerminal(id);
+  },
+
+  async openProjectInEditor(id: string): Promise<void> {
+    return await App.OpenProjectInEditor(id);
+  },
+
+  async getEditorConfig(): Promise<string> {
+    return await App.GetEditorConfig();
+  },
+
+  async setEditorConfig(editor: string): Promise<void> {
+    return await App.SetEditorConfig(editor);
   },
 };

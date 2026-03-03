@@ -36,7 +36,7 @@ export function useProjects() {
           await loadProjects();
           timer = schedule();
         },
-        transient ? 3000 : 15000,
+        transient ? 5000 : 30000,
       );
     };
 

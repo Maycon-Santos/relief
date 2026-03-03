@@ -1,4 +1,4 @@
-import { AlertCircle, ExternalLink, FileText, Play, RotateCw, Square, Trash2 } from "lucide-react";
+import { AlertCircle, Code, ExternalLink, FileText, FolderOpen, Play, RotateCw, Square, Terminal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -204,6 +204,36 @@ export function ProjectCard({
 							</Button>
 						</>
 					)}
+
+					<Button
+						onClick={() => api.openProjectInEditor(project.id)}
+						size="sm"
+						variant="secondary"
+						className="bg-zinc-800 hover:bg-zinc-700 text-gray-200 border-zinc-700"
+						title="Abrir no editor"
+					>
+						<Code className="h-4 w-4" />
+					</Button>
+
+					<Button
+						onClick={() => api.openProjectFolder(project.id)}
+						size="sm"
+						variant="secondary"
+						className="bg-zinc-800 hover:bg-zinc-700 text-gray-200 border-zinc-700"
+						title="Abrir pasta no Finder"
+					>
+						<FolderOpen className="h-4 w-4" />
+					</Button>
+
+					<Button
+						onClick={() => api.openProjectTerminal(project.id)}
+						size="sm"
+						variant="secondary"
+						className="bg-zinc-800 hover:bg-zinc-700 text-gray-200 border-zinc-700"
+						title="Abrir no terminal"
+					>
+						<Terminal className="h-4 w-4" />
+					</Button>
 
 					<Button
 						onClick={() => handleAction(onRemove, "remover")}

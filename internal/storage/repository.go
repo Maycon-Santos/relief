@@ -3,18 +3,60 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Maycon-Santos/relief/internal/domain"
 )
 
 type ProjectRepository struct {
-	db *DB
+	db              *DB
+	manifestCache   map[string]*cachedManifest
+	manifestCacheMu sync.RWMutex
+}
+
+type cachedManifest struct {
+	manifest *domain.Manifest
+	modTime  time.Time
 }
 
 func NewProjectRepository(db *DB) *ProjectRepository {
-	return &ProjectRepository{db: db}
+	return &ProjectRepository{
+		db:            db,
+		manifestCache: make(map[string]*cachedManifest),
+	}
+}
+
+func (r *ProjectRepository) getCachedManifest(path string) (*domain.Manifest, error) {
+	yamlPath := path + "/relief.yaml"
+	info, err := os.Stat(yamlPath)
+	if err != nil {
+		return nil, err
+	}
+
+	r.manifestCacheMu.RLock()
+	cached, exists := r.manifestCache[path]
+	r.manifestCacheMu.RUnlock()
+
+	if exists && cached.modTime.Equal(info.ModTime()) {
+		return cached.manifest, nil
+	}
+
+	manifest, err := domain.ParseManifest(path)
+	if err != nil {
+		return nil, err
+	}
+
+	r.manifestCacheMu.Lock()
+	r.manifestCache[path] = &cachedManifest{
+		manifest: manifest,
+		modTime:  info.ModTime(),
+	}
+	r.manifestCacheMu.Unlock()
+
+	return manifest, nil
 }
 
 func (r *ProjectRepository) Create(project *domain.Project) error {
@@ -143,7 +185,7 @@ func (r *ProjectRepository) GetByID(id string) (*domain.Project, error) {
 		return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
 	}
 
-	if manifest, err := domain.ParseManifest(project.Path); err == nil {
+	if manifest, err := r.getCachedManifest(project.Path); err == nil {
 		project.Manifest = manifest
 		if portStr, ok := manifest.Env["PORT"]; ok {
 			if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
@@ -201,7 +243,7 @@ func (r *ProjectRepository) GetByName(name string) (*domain.Project, error) {
 		return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
 	}
 
-	if manifest, err := domain.ParseManifest(project.Path); err == nil {
+	if manifest, err := r.getCachedManifest(project.Path); err == nil {
 		project.Manifest = manifest
 		if portStr, ok := manifest.Env["PORT"]; ok {
 			if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
@@ -264,7 +306,7 @@ func (r *ProjectRepository) List() ([]*domain.Project, error) {
 			return nil, fmt.Errorf("erro ao carregar dependências: %w", err)
 		}
 
-		if manifest, err := domain.ParseManifest(project.Path); err == nil {
+		if manifest, err := r.getCachedManifest(project.Path); err == nil {
 			project.Manifest = manifest
 			if portStr, ok := manifest.Env["PORT"]; ok {
 				if port, err := strconv.Atoi(portStr); err == nil && project.Port == 0 {
@@ -277,6 +319,45 @@ func (r *ProjectRepository) List() ([]*domain.Project, error) {
 			}
 		}
 
+		projects = append(projects, &project)
+	}
+
+	return projects, nil
+}
+
+// ListLight retorna projetos com apenas id, name, path e status (sem ParseManifest, sem dependências).
+func (r *ProjectRepository) ListLight() ([]*domain.Project, error) {
+	query := `
+		SELECT id, name, path, domain, type, status, port, pid, last_error, created_at, updated_at
+		FROM projects
+		ORDER BY name ASC
+	`
+
+	rows, err := r.db.conn.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao listar projetos: %w", err)
+	}
+	defer rows.Close()
+
+	projects := []*domain.Project{}
+	for rows.Next() {
+		var project domain.Project
+		err := rows.Scan(
+			&project.ID,
+			&project.Name,
+			&project.Path,
+			&project.Domain,
+			&project.Type,
+			&project.Status,
+			&project.Port,
+			&project.PID,
+			&project.LastError,
+			&project.CreatedAt,
+			&project.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("erro ao scanear projeto: %w", err)
+		}
 		projects = append(projects, &project)
 	}
 

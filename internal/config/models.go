@@ -76,6 +76,7 @@ type DatabaseConfig struct {
 type DevelopmentConfig struct {
 	StartupOrder  []string          `yaml:"startup_order"`
 	GlobalScripts map[string]string `yaml:"global_scripts"`
+	Editor        string            `yaml:"editor,omitempty"`
 }
 
 type LoggingConfig struct {

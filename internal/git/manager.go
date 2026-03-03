@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Maycon-Santos/relief/internal/domain"
 	"github.com/Maycon-Santos/relief/pkg/fileutil"
@@ -121,25 +122,57 @@ func (m *Manager) GetGitInfo(ctx context.Context, path string) (*domain.GitInfo,
 		return gitInfo, nil
 	}
 
-	if currentBranch, err := m.getCurrentBranch(ctx, path); err == nil {
-		gitInfo.CurrentBranch = currentBranch
-	}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 
-	if branches, err := m.getBranches(ctx, path); err == nil {
-		gitInfo.AvailableBranches = branches
-	}
+	wg.Add(5)
 
-	if remoteURL, err := m.getRemoteURL(ctx, path); err == nil {
-		gitInfo.RemoteURL = remoteURL
-	}
+	go func() {
+		defer wg.Done()
+		if currentBranch, err := m.getCurrentBranch(ctx, path); err == nil {
+			mu.Lock()
+			gitInfo.CurrentBranch = currentBranch
+			mu.Unlock()
+		}
+	}()
 
-	if hasChanges, err := m.hasUncommittedChanges(ctx, path); err == nil {
-		gitInfo.HasChanges = hasChanges
-	}
+	go func() {
+		defer wg.Done()
+		if branches, err := m.getBranches(ctx, path); err == nil {
+			mu.Lock()
+			gitInfo.AvailableBranches = branches
+			mu.Unlock()
+		}
+	}()
 
-	if lastCommit, err := m.getLastCommit(ctx, path); err == nil {
-		gitInfo.LastCommit = lastCommit
-	}
+	go func() {
+		defer wg.Done()
+		if remoteURL, err := m.getRemoteURL(ctx, path); err == nil {
+			mu.Lock()
+			gitInfo.RemoteURL = remoteURL
+			mu.Unlock()
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if hasChanges, err := m.hasUncommittedChanges(ctx, path); err == nil {
+			mu.Lock()
+			gitInfo.HasChanges = hasChanges
+			mu.Unlock()
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if lastCommit, err := m.getLastCommit(ctx, path); err == nil {
+			mu.Lock()
+			gitInfo.LastCommit = lastCommit
+			mu.Unlock()
+		}
+	}()
+
+	wg.Wait()
 
 	return gitInfo, nil
 }

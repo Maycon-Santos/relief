@@ -11,6 +11,17 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/services/wails";
 
+const EDITOR_OPTIONS = [
+	{ value: "code", label: "VS Code" },
+	{ value: "cursor", label: "Cursor" },
+	{ value: "zed", label: "Zed" },
+	{ value: "idea", label: "IntelliJ IDEA" },
+	{ value: "webstorm", label: "WebStorm" },
+	{ value: "sublime", label: "Sublime Text" },
+	{ value: "atom", label: "Atom" },
+	{ value: "nvim", label: "Neovim" },
+];
+
 interface ConfigEditorProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -23,6 +34,7 @@ export function ConfigEditor({ open, onOpenChange }: ConfigEditorProps) {
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
+	const [editor, setEditor] = useState("code");
 
 	const loadConfig = useCallback(async () => {
 		try {
@@ -31,6 +43,8 @@ export function ConfigEditor({ open, onOpenChange }: ConfigEditorProps) {
 			const yaml = await api.getConfigYAML();
 			setConfigYAML(yaml);
 			setOriginalYAML(yaml);
+			const currentEditor = await api.getEditorConfig();
+			setEditor(currentEditor);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Error loading config");
 			console.error("Error loading config:", err);
@@ -93,6 +107,28 @@ export function ConfigEditor({ open, onOpenChange }: ConfigEditorProps) {
 						Edit the global configuration file (~/.relief/config.yaml). Paths use ~/ for home
 						directory. Changes are applied immediately after saving.
 					</DialogDescription>
+					<div className="flex items-center gap-3 pt-2">
+						<label className="text-sm text-gray-400">Preferred Editor:</label>
+						<select
+							value={editor}
+							onChange={async (e) => {
+								const newEditor = e.target.value;
+								setEditor(newEditor);
+								try {
+									await api.setEditorConfig(newEditor);
+								} catch (err) {
+									console.error("Error saving editor config:", err);
+								}
+							}}
+							className="bg-zinc-800 border border-zinc-700 text-gray-200 text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							{EDITOR_OPTIONS.map((opt) => (
+								<option key={opt.value} value={opt.value}>
+									{opt.label}
+								</option>
+							))}
+						</select>
+					</div>
 				</DialogHeader>
 
 				<div className="flex-1 flex flex-col gap-3 overflow-hidden px-6 min-h-0">
